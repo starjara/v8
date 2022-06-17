@@ -849,7 +849,7 @@ static void GenerateMacroFloat32MinMax(MacroAssembler& masm) {
   __ LoadFloat(x, MemOperand(a0, offsetof(Inputs, src1_))); \
   __ LoadFloat(y, MemOperand(a0, offsetof(Inputs, src2_))); \
   __ fminmax(res, x, y);                                    \
-  __ StoreFloat(a, MemOperand(a1, offsetof(Results, res_field)))
+  __ StoreFloat(res, MemOperand(a1, offsetof(Results, res_field)))
 
   // a = min(b, c);
   FLOAT_MIN_MAX(Float32Min, a, b, c, min_abc_);
@@ -944,7 +944,7 @@ static void GenerateMacroFloat64MinMax(MacroAssembler& masm) {
   __ LoadDouble(x, MemOperand(a0, offsetof(Inputs, src1_))); \
   __ LoadDouble(y, MemOperand(a0, offsetof(Inputs, src2_))); \
   __ fminmax(res, x, y);                                     \
-  __ StoreDouble(a, MemOperand(a1, offsetof(Results, res_field)))
+  __ StoreDouble(res, MemOperand(a1, offsetof(Results, res_field)))
 
   // a = min(b, c);
   FLOAT_MIN_MAX(Float64Min, a, b, c, min_abc_);
