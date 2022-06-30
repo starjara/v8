@@ -569,7 +569,7 @@ void LiftoffAssembler::Load(LiftoffRegister dst, Register src_addr,
       Lbu(dst.gp(), src_op);
       break;
     case LoadType::kI64Load8U:
-      Lbu(dst.gp(), src_op);
+      Lbu(dst.low_gp(), src_op);
       TurboAssembler::mv(dst.high_gp(), zero_reg);
       break;
     case LoadType::kI32Load8S:
@@ -605,12 +605,10 @@ void LiftoffAssembler::Load(LiftoffRegister dst, Register src_addr,
       TurboAssembler::Lw(dst.gp(), src_op);
       break;
     case LoadType::kI64Load: {
-      MemOperand src_op_low = liftoff::GetMemOp(
-          this, src_addr, offset_reg, +liftoff::kLowWordOffset, scratch);
-      MemOperand src_op_upper = liftoff::GetMemOp(
-          this, src_addr, offset_reg, +liftoff::kHighWordOffset, scratch);
-      Lw(dst.low_gp(), src_op_low);
-      Lw(dst.high_gp(), src_op_upper);
+      Lw(dst.low_gp(), src_op);
+      src_op = liftoff::GetMemOp(this, src_addr, offset_reg,
+                                 offset_imm + kSystemPointerSize, scratch);
+      Lw(dst.high_gp(), src_op);
     } break;
     case LoadType::kF32Load:
       TurboAssembler::LoadFloat(dst.fp(), src_op);
@@ -643,16 +641,10 @@ void LiftoffAssembler::Store(Register dst_addr, Register offset_reg,
                              uintptr_t offset_imm, LiftoffRegister src,
                              StoreType type, LiftoffRegList pinned,
                              uint32_t* protected_store_pc, bool is_store_mem) {
-  Register dst = no_reg;
-  MemOperand dst_op = MemOperand(dst_addr, offset_imm);
-  if (offset_reg != no_reg) {
-    if (is_store_mem) {
-      pinned.set(src);
-    }
-    dst = GetUnusedRegister(kGpReg, pinned).gp();
-    emit_ptrsize_add(dst, dst_addr, offset_reg);
-    dst_op = MemOperand(dst, offset_imm);
-  }
+  UseScratchRegisterScope temps(this);
+  Register scratch = temps.Acquire();
+  MemOperand dst_op =
+      liftoff::GetMemOp(this, dst_addr, offset_reg, offset_imm, scratch);
 
 #if defined(V8_TARGET_BIG_ENDIAN)
   if (is_store_mem) {
@@ -671,24 +663,28 @@ void LiftoffAssembler::Store(Register dst_addr, Register offset_reg,
 
   switch (type.value()) {
     case StoreType::kI32Store8:
-    case StoreType::kI64Store8:
       Sb(src.gp(), dst_op);
       break;
+    case StoreType::kI64Store8:
+      Sb(src.low_gp(), dst_op);
+      break;
     case StoreType::kI32Store16:
-    case StoreType::kI64Store16:
       TurboAssembler::Sh(src.gp(), dst_op);
       break;
+    case StoreType::kI64Store16:
+      TurboAssembler::Sh(src.low_gp(), dst_op);
+      break;
     case StoreType::kI32Store:
-    case StoreType::kI64Store32:
       TurboAssembler::Sw(src.gp(), dst_op);
       break;
+    case StoreType::kI64Store32:
+      TurboAssembler::Sw(src.low_gp(), dst_op);
+      break;
     case StoreType::kI64Store: {
-      MemOperand dst_op_lower(dst_op.rm(),
-                              offset_imm + liftoff::kLowWordOffset);
-      MemOperand dst_op_upper(dst_op.rm(),
-                              offset_imm + liftoff::kHighWordOffset);
-      TurboAssembler::Sw(src.low_gp(), dst_op_lower);
-      TurboAssembler::Sw(src.high_gp(), dst_op_upper);
+      TurboAssembler::Sw(src.low_gp(), dst_op);
+      dst_op = liftoff::GetMemOp(this, dst_addr, offset_reg,
+                                 offset_imm + kSystemPointerSize, scratch);
+      TurboAssembler::Sw(src.high_gp(), dst_op);
       break;
     }
     case StoreType::kF32Store:
@@ -1339,6 +1335,7 @@ void LiftoffAssembler::FillStackSlotsWithZero(int start, int size) {
     uint32_t remainder = size;
     for (; remainder >= kStackSlotSize; remainder -= kStackSlotSize) {
       Sw(zero_reg, liftoff::GetStackSlot(start + remainder));
+      Sw(zero_reg, liftoff::GetStackSlot(start + remainder - 4));
     }
     DCHECK(remainder == 4 || remainder == 0);
     if (remainder) {
@@ -1562,19 +1559,23 @@ inline void Emit64BitShiftOperation(
   // That way we prevent overwriting some input registers while shifting.
   // Do this before any branch so that the cache state will be correct for
   // all conditions.
-  LiftoffRegister tmp = assm->GetUnusedRegister(kGpRegPair, pinned);
-
+  Register amount_capped =
+      pinned.set(assm->GetUnusedRegister(kGpReg, pinned).gp());
+  assm->And(amount_capped, amount, Operand(63));
   if (liftoff::IsRegInRegPair(dst, amount) || dst.overlaps(src)) {
     // Do the actual shift.
+    LiftoffRegister tmp = assm->GetUnusedRegister(kGpRegPair, pinned);
     (assm->*emit_shift)(tmp.low_gp(), tmp.high_gp(), src.low_gp(),
-                        src.high_gp(), amount, kScratchReg, kScratchReg2);
+                        src.high_gp(), amount_capped, kScratchReg,
+                        kScratchReg2);
 
     // Place result in destination register.
     assm->TurboAssembler::Move(dst.high_gp(), tmp.high_gp());
     assm->TurboAssembler::Move(dst.low_gp(), tmp.low_gp());
   } else {
     (assm->*emit_shift)(dst.low_gp(), dst.high_gp(), src.low_gp(),
-                        src.high_gp(), amount, kScratchReg, kScratchReg2);
+                        src.high_gp(), amount_capped, kScratchReg,
+                        kScratchReg2);
   }
 }
 }  // namespace liftoff
@@ -1588,7 +1589,8 @@ void LiftoffAssembler::emit_i64_add(LiftoffRegister dst, LiftoffRegister lhs,
 
 void LiftoffAssembler::emit_i64_addi(LiftoffRegister dst, LiftoffRegister lhs,
                                      int64_t imm) {
-  LiftoffRegister imm_reg = GetUnusedRegister(kFpReg, LiftoffRegList{dst, lhs});
+  LiftoffRegister imm_reg =
+      GetUnusedRegister(kGpRegPair, LiftoffRegList{dst, lhs});
   int32_t imm_low_word = static_cast<int32_t>(imm);
   int32_t imm_high_word = static_cast<int32_t>(imm >> 32);
 
@@ -1610,22 +1612,22 @@ void LiftoffAssembler::emit_i64_sub(LiftoffRegister dst, LiftoffRegister lhs,
 
 void LiftoffAssembler::emit_i64_shl(LiftoffRegister dst, LiftoffRegister src,
                                     Register amount) {
+  ASM_CODE_COMMENT(this);
   liftoff::Emit64BitShiftOperation(this, dst, src, amount,
                                    &TurboAssembler::ShlPair);
 }
 
 void LiftoffAssembler::emit_i64_shli(LiftoffRegister dst, LiftoffRegister src,
                                      int amount) {
+  ASM_CODE_COMMENT(this);
   UseScratchRegisterScope temps(this);
+  LiftoffRegister temp = GetUnusedRegister(kGpReg, LiftoffRegList{dst, src});
+  temps.Include(temp.gp());
   // {src.low_gp()} will still be needed after writing {dst.high_gp()} and
   // {dst.low_gp()}.
   Register src_low = liftoff::EnsureNoAlias(this, src.low_gp(), dst, &temps);
-  Register src_high = src.high_gp();
+  Register src_high = liftoff::EnsureNoAlias(this, src.high_gp(), dst, &temps);
   // {src.high_gp()} will still be needed after writing {dst.high_gp()}.
-  if (src_high == dst.high_gp()) {
-    mv(kScratchReg, src_high);
-    src_high = kScratchReg;
-  }
   DCHECK_NE(dst.low_gp(), kScratchReg);
   DCHECK_NE(dst.high_gp(), kScratchReg);
 
@@ -1641,14 +1643,18 @@ void LiftoffAssembler::emit_i64_sar(LiftoffRegister dst, LiftoffRegister src,
 
 void LiftoffAssembler::emit_i64_sari(LiftoffRegister dst, LiftoffRegister src,
                                      int amount) {
+  ASM_CODE_COMMENT(this);
   UseScratchRegisterScope temps(this);
-  // {src.high_gp()} will still be needed after writing {dst.high_gp()} and
+  LiftoffRegister temp = GetUnusedRegister(kGpReg, LiftoffRegList{dst, src});
+  temps.Include(temp.gp());
+  // {src.low_gp()} will still be needed after writing {dst.high_gp()} and
   // {dst.low_gp()}.
+  Register src_low = liftoff::EnsureNoAlias(this, src.low_gp(), dst, &temps);
   Register src_high = liftoff::EnsureNoAlias(this, src.high_gp(), dst, &temps);
   DCHECK_NE(dst.low_gp(), kScratchReg);
   DCHECK_NE(dst.high_gp(), kScratchReg);
 
-  TurboAssembler::SarPair(dst.low_gp(), dst.high_gp(), src.low_gp(), src_high,
+  TurboAssembler::SarPair(dst.low_gp(), dst.high_gp(), src_low, src_high,
                           amount, kScratchReg, kScratchReg2);
 }
 
@@ -1660,14 +1666,18 @@ void LiftoffAssembler::emit_i64_shr(LiftoffRegister dst, LiftoffRegister src,
 
 void LiftoffAssembler::emit_i64_shri(LiftoffRegister dst, LiftoffRegister src,
                                      int amount) {
+  ASM_CODE_COMMENT(this);
   UseScratchRegisterScope temps(this);
-  // {src.high_gp()} will still be needed after writing {dst.high_gp()} and
+  LiftoffRegister temp = GetUnusedRegister(kGpReg, LiftoffRegList{dst, src});
+  temps.Include(temp.gp());
+  // {src.low_gp()} will still be needed after writing {dst.high_gp()} and
   // {dst.low_gp()}.
+  Register src_low = liftoff::EnsureNoAlias(this, src.low_gp(), dst, &temps);
   Register src_high = liftoff::EnsureNoAlias(this, src.high_gp(), dst, &temps);
   DCHECK_NE(dst.low_gp(), kScratchReg);
   DCHECK_NE(dst.high_gp(), kScratchReg);
 
-  TurboAssembler::ShrPair(dst.low_gp(), dst.high_gp(), src.low_gp(), src_high,
+  TurboAssembler::ShrPair(dst.low_gp(), dst.high_gp(), src_low, src_high,
                           amount, kScratchReg, kScratchReg2);
 }
 
@@ -1845,9 +1855,9 @@ bool LiftoffAssembler::emit_type_conversion(WasmOpcode opcode,
       return true;
     case kExprF64ReinterpretI64:
       Sub(sp, sp, kDoubleSize);
-      Sw(dst.low_gp(), MemOperand(sp, 0));
-      Sw(dst.high_gp(), MemOperand(sp, 4));
-      LoadDouble(src.fp(), MemOperand(sp, 0));
+      Sw(src.low_gp(), MemOperand(sp, 0));
+      Sw(src.high_gp(), MemOperand(sp, 4));
+      LoadDouble(dst.fp(), MemOperand(sp, 0));
       Add(sp, sp, kDoubleSize);
       return true;
     case kExprI32SConvertSatF32: {
@@ -1921,10 +1931,10 @@ void LiftoffAssembler::emit_cond_jump(LiftoffCondition liftoff_cond,
                                       Register lhs, Register rhs) {
   Condition cond = liftoff::ToCondition(liftoff_cond);
   if (rhs == no_reg) {
-    DCHECK(kind == kI32 || kind == kI64);
+    DCHECK(kind == kI32);
     TurboAssembler::Branch(label, cond, lhs, Operand(zero_reg));
   } else {
-    DCHECK((kind == kI32 || kind == kI64) ||
+    DCHECK((kind == kI32) ||
            (is_reference(kind) &&
             (liftoff_cond == kEqual || liftoff_cond == kUnequal)));
     TurboAssembler::Branch(label, cond, lhs, Operand(rhs));
@@ -1983,6 +1993,7 @@ inline LiftoffCondition cond_make_unsigned(LiftoffCondition cond) {
 void LiftoffAssembler::emit_i64_set_cond(LiftoffCondition liftoff_cond,
                                          Register dst, LiftoffRegister lhs,
                                          LiftoffRegister rhs) {
+  ASM_CODE_COMMENT(this);
   Condition cond = liftoff::ToCondition(liftoff_cond);
   Label low, cont;
 
@@ -2008,8 +2019,20 @@ void LiftoffAssembler::emit_i64_set_cond(LiftoffCondition liftoff_cond,
   Branch(&cont);
 
   bind(&low);
-  Branch(&cont, unsigned_cond, lhs.low_gp(), Operand(rhs.low_gp()));
-  mv(tmp, zero_reg);
+  if (unsigned_cond == cond) {
+    Branch(&cont, cond, lhs.low_gp(), Operand(rhs.low_gp()));
+    mv(tmp, zero_reg);
+  } else {
+    Label lt_zero;
+    Branch(&lt_zero, lt, lhs.high_gp(), Operand(zero_reg));
+    Branch(&cont, unsigned_cond, lhs.low_gp(), Operand(rhs.low_gp()));
+    mv(tmp, zero_reg);
+    Branch(&cont);
+    bind(&lt_zero);
+    Branch(&cont, unsigned_cond, rhs.low_gp(), Operand(lhs.low_gp()));
+    mv(tmp, zero_reg);
+    Branch(&cont);
+  }
   bind(&cont);
   // Move result to dst register if needed.
   TurboAssembler::Move(dst, tmp);
