@@ -7,6 +7,12 @@
 #include "src/common/code-memory-access-inl.h"
 #include "src/utils/allocation.h"
 
+#ifdef V8_TARGET_ARCH_RISCV64
+extern "C" {
+  #include "src/common/verse.h"
+}
+#endif
+
 namespace v8 {
 namespace internal {
 
@@ -51,6 +57,7 @@ bool ThreadIsolation::Enabled() {
 // static
 template <typename T, typename... Args>
 void ThreadIsolation::ConstructNew(T** ptr, Args&&... args) {
+  printf("Jit page is allocated\n");
   if (Enabled()) {
     *ptr = reinterpret_cast<T*>(trusted_data_.allocator->Allocate(sizeof(T)));
     if (!*ptr) return;
@@ -63,10 +70,15 @@ void ThreadIsolation::ConstructNew(T** ptr, Args&&... args) {
 // static
 template <typename T>
 void ThreadIsolation::Delete(T* ptr) {
+  printf("Jit page is deleted\n");
   if (Enabled()) {
     ptr->~T();
     trusted_data_.allocator->Free(ptr);
   } else {
+#if V8_TARGET_ARCH_RISCV64
+    printf("verse_munmap here\n");
+    munmap_verse();
+#endif
     delete ptr;
   }
 }
@@ -78,8 +90,16 @@ void ThreadIsolation::Initialize(
   trusted_data_.initialized = true;
 #endif
 
+  // Add for print
+  printf("Initialize\n");
+  
   bool enable = thread_isolated_allocator != nullptr && !v8_flags.jitless;
 
+#ifdef V8_TARGET_ARCH_RISCV64
+  create_verse(0);
+  enter_verse(0);
+#endif
+  
 #ifdef THREAD_SANITIZER
   // TODO(sroettger): with TSAN enabled, we get crashes because
   // SetDefaultPermissionsForSignalHandler gets called while a
@@ -111,6 +131,10 @@ void ThreadIsolation::Initialize(
   }
 
   if (!enable) {
+    
+    // Add for print
+    printf("End of initialize\n");
+    
     return;
   }
 
@@ -126,6 +150,7 @@ void ThreadIsolation::Initialize(
       v8::PageAllocator::Permission::kRead,
       base::MemoryProtectionKey::kDefaultProtectionKey);
 #endif
+
 }
 
 // static
@@ -393,16 +418,28 @@ ThreadIsolation::JitPageReference::AllocationContaining(
 void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
   CFIMetadataWriteScope write_scope("Adding new executable memory.");
 
+  // Add for print
+  printf("Adding new executable memory Address : 0x%lx, size : %zu\n", address, size);
+
   base::MutexGuard guard(trusted_data_.jit_pages_mutex_);
   CheckForRegionOverlap(*trusted_data_.jit_pages_, address, size);
   JitPage* jit_page;
   ConstructNew(&jit_page, size);
   trusted_data_.jit_pages_->emplace(address, jit_page);
+
+#if V8_TARGET_ARCH_RISCV64
+    printf("verse_mmap for write page here %lu\n", size);
+    mmap_verse(address, size, PROT_WRITE | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS);
+#endif
+
 }
 
 void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
   // TODO(sroettger): merge the write scopes higher up.
   CFIMetadataWriteScope write_scope("Removing executable memory.");
+
+  // Add for print
+  printf("Removing executable memory\n");
 
   JitPage* to_delete;
   {
@@ -452,6 +489,8 @@ bool ThreadIsolation::MakeExecutable(Address address, size_t size) {
 #if V8_HAS_PKU_JIT_WRITE_PROTECT
   return base::MemoryProtectionKey::SetPermissionsAndKey(
       {address, size}, PageAllocator::Permission::kReadWriteExecute, pkey());
+#elif V8_TARGET_ARCH_RISCV64
+  printf("verse_mprotect for execute insert here\n");
 #else   // V8_HAS_PKU_JIT_WRITE_PROTECT
   UNREACHABLE();
 #endif  // V8_HAS_PKU_JIT_WRITE_PROTECT

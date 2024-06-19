@@ -1,0 +1,29 @@
+run #0
+run #1
+run #2
+run #3
+run #4
+run #5
+run #6
+run #7
+run #8
+run #9
+Richards,15919.8,871.95,9
+DeltaBlue,405.7,3.61,9
+Crypto,2178.1,195.75,9
+RayTrace,3656.6,15.34,9
+EarleyBoyer,594.1,51.38,9
+RegExp,16.2,0.44,9
+Splay,293.4,152.47,9
+SplayLatency,357.6,101.69,9
+NavierStokes,10244.3,108.24,9
+PdfJS,136.6,0.88,9
+Mandreel,250.2,3.03,9
+MandreelLatency,212.9,2.71,9
+Gameboy,468.6,4.03,9
+CodeLoad,455.7,4.90,9
+Box2D,100.7,1.32,9
+zlib,1689.1,22.40,9
+Typescript,259.7,2.92,9
+Octane,542.0,86.82,9 
+

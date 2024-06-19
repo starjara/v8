@@ -49,15 +49,16 @@ WritableJitAllocation::WritableJitAllocation(
       page_ref_(ThreadIsolation::LookupJitPage(addr, size)),
       allocation_(source == JitAllocationSource::kRegister
                       ? page_ref_->RegisterAllocation(addr, size, type)
-                      : page_ref_->LookupAllocation(addr, size, type)) {}
+		  : page_ref_->LookupAllocation(addr, size, type)) {}
 
 WritableJitAllocation::WritableJitAllocation(
     Address addr, size_t size, ThreadIsolation::JitAllocationType type)
-    : address_(addr), allocation_(size, type) {}
+  : address_(addr), allocation_(size, type) {}
 
 // static
 WritableJitAllocation WritableJitAllocation::ForNonExecutableMemory(
     Address addr, size_t size, ThreadIsolation::JitAllocationType type) {
+  printf("NonExecutableMemory WriteableJitAllocation\n");
   return WritableJitAllocation(addr, size, type);
 }
 
@@ -154,6 +155,9 @@ V8_INLINE void WritableJitAllocation::WriteHeaderSlot(Address address, T value,
 
 void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
+#if V8_TARGET_ARCH_RISCV64
+  printf("emit code in here\n");
+#endif
   CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
 }
 

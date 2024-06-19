@@ -363,8 +363,8 @@ class V8_EXPORT ThreadIsolation {
   friend struct StlAllocator;
   friend class WritableJitPage;
   friend class WritableJitAllocation;
-  friend class WritableJumpTablePair;
-};
+  friend class WritableJumpTablePair;}
+  ;
 
 // A scope class that temporarily makes the JitAllocation writable. All writes
 // to executable memory should go through this object since it adds validation
@@ -562,7 +562,6 @@ using CFIMetadataWriteScope = NopRwxMemoryWriteScope;
 #else
 using CFIMetadataWriteScope = RwxMemoryWriteScope;
 #endif
-
 }  // namespace internal
 }  // namespace v8
 

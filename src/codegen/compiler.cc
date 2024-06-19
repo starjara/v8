@@ -1193,6 +1193,10 @@ MaybeHandle<Code> CompileTurbofan(Isolate* isolate, Handle<JSFunction> function,
                                   ConcurrencyMode mode,
                                   BytecodeOffset osr_offset,
                                   CompileResultBehavior result_behavior) {
+
+  // Add for print
+  printf("ComplieTurbofan\n");
+  
   VMState<COMPILER> state(isolate);
   TimerEventScope<TimerEventOptimizeCode> optimize_code_timer(isolate);
   RCS_SCOPE(isolate, RuntimeCallCounterId::kOptimizeCode);
