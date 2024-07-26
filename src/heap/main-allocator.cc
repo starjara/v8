@@ -778,7 +778,7 @@ void PagedSpaceAllocatorPolicy::SetLinearAllocationArea(Address top,
 
 bool PagedSpaceAllocatorPolicy::TryAllocationFromFreeList(
     size_t size_in_bytes, AllocationOrigin origin) {
-  PagedSpace::ConcurrentAllocationMutex guard(space_);
+    PagedSpace::ConcurrentAllocationMutex guard(space_);
   DCHECK(IsAligned(size_in_bytes, kTaggedSize));
   DCHECK_LE(allocator_->top(), allocator_->limit());
 #ifdef DEBUG
@@ -831,6 +831,7 @@ bool PagedSpaceAllocatorPolicy::TryAllocationFromFreeList(
   SetLinearAllocationArea(start, limit, end);
   space_->AddRangeToActiveSystemPages(page, start, limit);
 
+  
   return true;
 }
 

@@ -20,6 +20,12 @@
 #if V8_HAS_BECORE_JIT_WRITE_PROTECT
 #include <BrowserEngineCore/BEMemory.h>
 #endif
+#if V8_TARGET_ARCH_RISCV64
+extern "C" {
+  #include "src/common/verse.h"
+}
+#endif
+
 
 namespace v8 {
 namespace internal {
@@ -155,10 +161,16 @@ V8_INLINE void WritableJitAllocation::WriteHeaderSlot(Address address, T value,
 
 void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
-#if V8_TARGET_ARCH_RISCV64
-  printf("emit code in here\n");
-#endif
-  CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
+  printf("emit code in here addr : 0x%lx, dst_offset : 0x%zx, src : 0x%s, num_bytes : 0x%zx\n", address_, dst_offset, src, num_bytes);
+  
+  verse_enter(0);
+  char tmp[num_bytes];
+  verse_write((__u64)(address_ + dst_offset), (void *)src, num_bytes);
+  CopyBytes(reinterpret_cast<uint8_t*>(tmp), reinterpret_cast<uint8_t*>(address_ + dst_offset), num_bytes);
+  printf("Written code : 0x%lx, 0x%s\n", address_ + dst_offset, tmp);
+  verse_exit(1);
+
+  //CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
 }
 
 void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
@@ -286,6 +298,23 @@ void RwxMemoryWriteScope::SetExecutable() {
       ThreadIsolation::pkey(), base::MemoryProtectionKey::kDisableWrite);
 }
 
+#elif V8_TARGET_ARCH_RISCV64
+  //static
+  bool RwxMemoryWriteScope::IsSupported() {return true;}
+
+  //static
+  void RwxMemoryWriteScope::SetWritable()
+  {
+  }
+
+  //static
+  void RwxMemoryWriteScope::SetExecutable()
+  {
+    // verse_enter(0);
+    // verse_map_executable((__u64) address_, (__u64) address_, 4096);
+    // verse_exit(1);
+  }
+  
 #else  // !V8_HAS_PTHREAD_JIT_WRITE_PROTECT && !V8_TRY_USE_PKU_JIT_WRITE_PROTECT
 
 // static

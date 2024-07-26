@@ -252,6 +252,7 @@ MemoryAllocator::AllocateUninitializedChunkAt(BaseSpace* space,
                                   space->identity());
   Address area_end = area_start + area_size;
 
+
   return MemoryChunkAllocationResult{
       reinterpret_cast<void*>(base), nullptr, chunk_size, area_start, area_end,
       std::move(reservation),

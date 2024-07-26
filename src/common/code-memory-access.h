@@ -286,7 +286,7 @@ class V8_EXPORT ThreadIsolation {
 
   class JitPage {
    public:
-    explicit JitPage(size_t size) : size_(size) {}
+    explicit JitPage(size_t size) : size_(size) {printf("A new jit page is allocated\n"); }
     ~JitPage();
 
    private:

@@ -11,6 +11,10 @@
 #include "src/objects/instruction-stream.h"
 #include "src/objects/objects-inl.h"  // For HeapObject::IsInstructionStream.
 
+extern "C" {
+  #include "src/common/verse.h"
+}
+
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
 
@@ -83,6 +87,7 @@ Tagged<InstructionStream> InstructionStream::Initialize(
   CONDITIONAL_PROTECTED_POINTER_WRITE_BARRIER(*istream, kRelocationInfoOffset,
                                               reloc_info, UPDATE_WRITE_BARRIER);
 
+  
   return istream;
 }
 
@@ -187,6 +192,11 @@ void InstructionStream::set_code(Tagged<Code> value, ReleaseStoreTag tag) {
   DCHECK(!ObjectInYoungGeneration(value));
   DCHECK(IsTrustedSpaceObject(value));
   WriteProtectedPointerField(kCodeOffset, value, tag);
+
+  //verse_enter(0);
+  //verse_write((__u64) this->instruction_start() + kCodeOffset, &value, sizeof(this->Size()));
+  //verse_exit(1);
+
   CONDITIONAL_PROTECTED_POINTER_WRITE_BARRIER(*this, kCodeOffset, value,
                                               UPDATE_WRITE_BARRIER);
 }

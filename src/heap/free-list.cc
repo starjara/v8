@@ -174,6 +174,7 @@ size_t FreeList::Free(const WritableFreeSpace& free_space, FreeMode mode) {
   PageMetadata* page = PageMetadata::FromAddress(start);
   page->DecreaseAllocatedBytes(size_in_bytes);
 
+  
   // Blocks have to be a minimum size to hold free list items.
   if (size_in_bytes < min_block_size_) {
     page->add_wasted_memory(size_in_bytes);
@@ -186,6 +187,7 @@ size_t FreeList::Free(const WritableFreeSpace& free_space, FreeMode mode) {
   page->free_list_category(type)->Free(free_space, mode, this);
   DCHECK_EQ(page->AvailableInFreeList(),
             page->AvailableInFreeListFromAllocatedBytes());
+
   return 0;
 }
 

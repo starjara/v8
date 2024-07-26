@@ -44,7 +44,7 @@ PageMetadata* SemiSpace::InitializePage(MutablePageMetadata* mutable_page) {
 }
 
 bool SemiSpace::EnsureCurrentCapacity() {
-  if (IsCommitted()) {
+    if (IsCommitted()) {
     const int expected_pages =
         static_cast<int>(target_capacity_ / PageMetadata::kPageSize);
     // `target_capacity_` is a multiple of `PageMetadata::kPageSize`.

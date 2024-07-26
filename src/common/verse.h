@@ -1,52 +1,58 @@
 #ifndef __VERSE_LIB__
 #define __VERSE_LIB__
 
-//#include <linux/ioctl.h>
-#include <sys/mman.h>
+#define DEFAULT_VERSE_DEV    "/dev/verse"
 
-#define DEFAULT_MINI_DEV    "/dev/mini"
+#define VERSEIO  0xF3
 
-#define MINIIO  0xF3
+#define VERSE_CREATE  _IO(VERSEIO, 0x01)
+#define VERSE_DEST  _IO(VERSEIO, 0x02)
 
-#define MINI_CREATE_VM  _IO(MINIIO, 0x1)
-#define MINI_DEST_VM  _IO(MINIIO, 0x2)
+#define VERSE_ENTER  _IO(VERSEIO, 0x11)
+#define VERSE_EXIT   _IO(VERSEIO, 0x12)
 
-#define MINI_ALLOC  _IO(MINIIO, 0x5)
-#define MINI_FREE   _IO(MINIIO, 0x6)
+#define VERSE_MMAP  _IOW(VERSEIO, 0x21, struct verse_memory_region)
+#define VERSE_MUNMAP   _IO(VERSEIO, 0x22)
+#define VERSE_MPROTECT _IO(VERSEIO, 0x23)
 
-#define MINI_ENTER  _IO(MINIIO, 0x9)
-#define MINI_EXIT   _IO(MINIIO, 0xa)
+#ifndef PROT_NONE
+#define PROT_NONE 0x00
+#endif
 
-#define VERSE_ATTACH _IO(MINIIO, 0xb)
-#define VERSE_DETACH _IO(MINIIO, 0xc)
+#ifndef PROT_READ
+#define PROT_READ 0x01
+#endif
 
-#define MINI_CREATE_VCPU  _IO(MINIIO, 0x41)
+#ifndef PROT_WRITE
+#define PROT_WRITE 0x02
+#endif
 
-#define MINI_SET_USER_MEMORY_REGION     _IOW(MINIIO, 0x46, struct userspace_memory_region)
-
-static int verse_fd;
+#ifndef PROT_EXEC
+#define PROT_EXEC 0x04
+#endif
 
 typedef unsigned int __u32;
-typedef unsigned long __u64;
+typedef unsigned long long __u64;
+typedef unsigned long size_t;
 
-struct userspace_memory_region {
-    __u32 slots;
-    __u32 flags;
-    __u64 guest_phys_addr;
-    __u64 memory_size;
-    __u64 userspace_addr;
+struct verse_memory_region {
+  __u64 guest_phys_addr;
+  __u64 memory_size;
+  __u64 userspace_addr;
+  __u32 prot;
 };
 
-int create_verse(int vid);
-int destroy_verse(int vid);
+int verse_create(int vid);
+int verse_destroy(int vid);
 
-int enter_verse(int vid);
-int exit_verse();
+int verse_enter(int vid);
+int verse_exit(int isFast);
 
-int mmap_verse(__u64 base, __u64 size, int prot, int flags);
-void munmap_verse();
+__u64 verse_mmap(__u64 base, __u64 userspace_addr, size_t size, int prot);
+void verse_munmap(__u64 base, size_t size);
+void *verse_mprotect(__u64 base, __u64 user_start, size_t size, int prot);
 
-int verse_mmap(struct verse *v);
-int verse_munmap(struct verse *v);
-int verse_mprotect(struct verse *v);
+int verse_write(__u64 base, void *src, size_t size);
+int verse_read(__u64 base, void *dst, size_t size);
+
 #endif
