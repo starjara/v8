@@ -24,7 +24,8 @@
 #if V8_TARGET_ARCH_RISCV64
 extern "C" {
   // #include "src/common/verse.h"
-  // #include <sys/mman.h>
+  #include <sys/mman.h>
+#undef MAP_TYPE
 }
 #endif
 
@@ -163,16 +164,9 @@ V8_INLINE void WritableJitAllocation::WriteHeaderSlot(Address address, T value,
 
 void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
-  // printf("emit code in here addr : 0x%lx, dst_offset : 0x%zx, src : 0x%s, num_bytes : 0x%zx\n", address_, dst_offset, src, num_bytes);
-  
-  // verse_enter(0);
-  // char tmp[num_bytes];
-  // verse_write((__u64)(address_ + dst_offset), (void *)src, num_bytes);
-  // CopyBytes(reinterpret_cast<uint8_t*>(tmp), reinterpret_cast<uint8_t*>(address_ + dst_offset), num_bytes);
-  // printf("Written code : 0x%lx, 0x%s\n", address_ + dst_offset, tmp);
-  // verse_exit(1);
-
+  mprotect((void *)(address_ + dst_offset), num_bytes, PROT_READ | PROT_WRITE);
   CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
+  mprotect((void *)(address_ + dst_offset), num_bytes, PROT_READ | PROT_EXEC);
 }
 
 void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
