@@ -155,15 +155,17 @@ int GetFlagsForMemoryPermission(OS::MemoryPermission access,
 
 void* Allocate(void* hint, size_t size, OS::MemoryPermission access,
                PageType page_type) {
+  /*
   printf("Allocate\n");
   printf("hint : 0x%lx\n", (unsigned long) hint);
   printf("size : 0x%lx\n", size);
   printf("kMapFd : 0x%lx\n", kMmapFd);
   printf("kMapFdOffset : 0x%lx\n", kMmapFdOffset);
+  */
   int prot = GetProtectionFromMemoryPermission(access);
   int flags = GetFlagsForMemoryPermission(access, page_type);
-  printf("prot : 0x%x\n", prot);
-  printf("flags : 0x%x\n", flags);
+  // printf("prot : 0x%x\n", prot);
+  // printf("flags : 0x%x\n", flags);
   void* result = mmap(hint, size, prot, flags, kMmapFd, kMmapFdOffset);
   if (result == MAP_FAILED) return nullptr;
 

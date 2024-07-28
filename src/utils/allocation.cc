@@ -167,7 +167,7 @@ void* GetRandomMmapAddr() {
 
 void* AllocatePages(v8::PageAllocator* page_allocator, void* hint, size_t size,
                     size_t alignment, PageAllocator::Permission access) {
-  printf("Allocation.cc::AllocatePages\n");
+  // printf("Allocation.cc::AllocatePages\n");
   DCHECK_NOT_NULL(page_allocator);
   DCHECK(IsAligned(reinterpret_cast<Address>(hint), alignment));
   DCHECK(IsAligned(size, page_allocator->AllocatePageSize()));
@@ -180,15 +180,17 @@ void* AllocatePages(v8::PageAllocator* page_allocator, void* hint, size_t size,
     if (V8_LIKELY(result != nullptr)) break;
     OnCriticalMemoryPressure();
   }
+  /*
   if(result != NULL && access != PageAllocator::kNoAccess) {
-    printf("result : 0x%lx\n", (unsigned long) result);
-    printf("hint : 0x%lx\n", (unsigned long) hint);
-    printf("access : 0x%x\n", access);
-    printf("size : 0x%lx\n", size);
+    // printf("result : 0x%lx\n", (unsigned long) result);
+    // printf("hint : 0x%lx\n", (unsigned long) hint);
+    // printf("access : 0x%x\n", access);
+    // printf("size : 0x%lx\n", size);
     //verse_enter(0);
     //verse_mmap((unsigned long)result, (unsigned long) result, size, access);
     //verse_exit(1);
   }
+  */
   return result;
 }
 
@@ -231,7 +233,7 @@ VirtualMemory::VirtualMemory(v8::PageAllocator* page_allocator, size_t size,
   alignment = RoundUp(alignment, page_size);
   Address address = reinterpret_cast<Address>(AllocatePages(
       page_allocator_, hint, RoundUp(size, page_size), alignment, permissions));
-  printf("VirtualMemory::VirtualMemory mapped 0x%lx\n", address);
+  //printf("VirtualMemory::VirtualMemory mapped 0x%lx\n", address);
   if (address != kNullAddress) {
     DCHECK(IsAligned(address, alignment));
     region_ = base::AddressRegion(address, size);

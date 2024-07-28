@@ -86,7 +86,7 @@ void ThreadIsolation::Initialize(
 #endif
 
   // Add for print
-  printf("Initialize\n");
+  // printf("Initialize\n");
   
   bool enable = thread_isolated_allocator != nullptr && !v8_flags.jitless;
 
@@ -127,7 +127,7 @@ void ThreadIsolation::Initialize(
   if (!enable) {
     
     // Add for print
-    printf("End of initialize\n");
+    // printf("End of initialize\n");
   
     return;
   }
@@ -318,7 +318,7 @@ ThreadIsolation::JitPageReference::RegisterAllocation(base::Address addr,
                                                       JitAllocationType type) {
   // The data is untrusted from the pov of CFI, so the checks are security
   // sensitive.
-  printf("RegisterAllocation\n");
+  //printf("RegisterAllocation\n");
   CHECK_GE(addr, address_);
   base::Address offset = addr - address_;
   base::Address end_offset = offset + size;
@@ -414,24 +414,21 @@ void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
   CFIMetadataWriteScope write_scope("Adding new executable memory.");
 
   // Add for print
-  printf("RegisterJitPage\n");
-  printf("Adding new executable memory Address : 0x%lx, size : 0x%lx\n", address, size);
+  // printf("RegisterJitPage\n");
+  // printf("Adding new executable memory Address : 0x%lx, size : 0x%lx\n", address, size);
 
   base::MutexGuard guard(trusted_data_.jit_pages_mutex_);
   CheckForRegionOverlap(*trusted_data_.jit_pages_, address, size);
   JitPage* jit_page;
   
 #if V8_TARGET_ARCH_RISCV64
-  verse_enter(0);
-    // char *tmp = reinterpret_cast<char *>(address); 
-    // *tmp = 'A';
-    // printf("0x%lx %p %c\n", address, tmp, *tmp);
-   // for(int i=0; i< size; i += 4096) {
     memset(reinterpret_cast<void *>(address), 0, size);
+
+    verse_enter(0);
     verse_mmap(address , address , size, PROT_READ | PROT_WRITE);
-   // }
     verse_exit(0);
-   ConstructNew(&jit_page, size);
+    
+    ConstructNew(&jit_page, size);
 #else
    ConstructNew(&jit_page, size);
 #endif
@@ -442,7 +439,7 @@ void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
   // TODO(sroettger): merge the write scopes higher up.
   CFIMetadataWriteScope write_scope("Removing executable memory.");
 
-  printf("Removing executable memory\n");
+  // printf("Removing executable memory\n");
 
   JitPage* to_delete;
   {
@@ -481,12 +478,12 @@ void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
     }
   }
   Delete(to_delete);
-#if V8_TARGET_ARCH_RISCV64
-  verse_enter(0);
-  printf("Removing Jit Page : 0x%lx, 0x%lx\n", address, size);
-  verse_munmap(address, size);
-  verse_exit(0);
-#endif
+ #if V8_TARGET_ARCH_RISCV64
+   verse_enter(0);
+   // printf("Removing Jit Page : 0x%lx, 0x%lx\n", address, size);
+   verse_munmap(address, size);
+   verse_exit(0);
+ #endif
 
 }
 
