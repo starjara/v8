@@ -90,9 +90,11 @@ void ThreadIsolation::Initialize(
   
   bool enable = thread_isolated_allocator != nullptr && !v8_flags.jitless;
 
+  /*
 #ifdef V8_TARGET_ARCH_RISCV64
   verse_create(0);
 #endif
+  */
   
 #ifdef THREAD_SANITIZER
   // TODO(sroettger): with TSAN enabled, we get crashes because
