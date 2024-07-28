@@ -9,7 +9,7 @@
 
 #ifdef V8_TARGET_ARCH_RISCV64
 extern "C" {
-  #include "src/common/verse.h"
+  //  #include "src/common/verse.h"
   #include <sys/mman.h>
 }
 #endif
@@ -424,11 +424,13 @@ void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
   JitPage* jit_page;
   
 #if V8_TARGET_ARCH_RISCV64
-    memset(reinterpret_cast<void *>(address), 0, size);
+  // memset(reinterpret_cast<void *>(address), 0, size);
 
+    /*
     verse_enter(0);
     verse_mmap(address , address , size, PROT_READ | PROT_WRITE);
     verse_exit(0);
+    */
     
     ConstructNew(&jit_page, size);
 #else
@@ -481,10 +483,10 @@ void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
   }
   Delete(to_delete);
  #if V8_TARGET_ARCH_RISCV64
-   verse_enter(0);
+   // verse_enter(0);
    // printf("Removing Jit Page : 0x%lx, 0x%lx\n", address, size);
-   verse_munmap(address, size);
-   verse_exit(0);
+   // verse_munmap(address, size);
+   // verse_exit(0);
  #endif
 
 }
