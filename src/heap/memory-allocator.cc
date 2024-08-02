@@ -431,6 +431,7 @@ PageMetadata* MemoryAllocator::AllocatePage(
   MemoryChunk::MainThreadFlags flags = metadata->InitialFlags(executable);
   if (executable) {
     RwxMemoryWriteScope scope("Initialize a new MemoryChunk.");
+    scope.SetInit(chunk_info->area_start, chunk_info->size);
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);
   } else {
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);
@@ -493,6 +494,7 @@ LargePageMetadata* MemoryAllocator::AllocateLargePage(
   MemoryChunk::MainThreadFlags flags = metadata->InitialFlags(executable);
   if (executable) {
     RwxMemoryWriteScope scope("Initialize a new MemoryChunk.");
+    scope.SetInit(chunk_info->area_start, chunk_info->size);
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);
   } else {
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);

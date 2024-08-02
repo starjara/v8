@@ -24,6 +24,11 @@
 #include "src/objects/js-array-buffer.h"
 #include "src/objects/objects-inl.h"
 
+//#define LOG_E printf("[heap/marking-barrier.cc] Enter: %s\n", __func__)
+//#define LOG_O printf("[heap/marking-barrier.cc] Exit: %s\n", __func__)
+#define LOG_E
+#define LOG_O
+
 namespace v8 {
 namespace internal {
 
@@ -218,6 +223,7 @@ void DeactivateSpace(Space* space) {
 }
 
 void ActivateSpaces(Heap* heap, MarkingMode marking_mode) {
+  LOG_E;
   ActivateSpace(heap->old_space(), marking_mode);
   ActivateSpace(heap->lo_space(), marking_mode);
   if (heap->new_space()) {
@@ -226,8 +232,48 @@ void ActivateSpaces(Heap* heap, MarkingMode marking_mode) {
   }
   ActivateSpace(heap->new_lo_space(), marking_mode);
   {
+    /////////////////// First scope ///////////////////////
+    Address addr = heap->code_space()->first_page()->ChunkAddress();
+    Address last_addr = heap->code_space()->last_page()->ChunkAddress();
+    size_t size = (last_addr + heap->code_space()->last_page()->size()) - addr;
+    int page_count = heap->code_space()->CountTotalPages();
+    size = size * page_count;
+    /*
+    printf("code_space Start: 0x%lx\n", addr); 
+    printf("code_space size: 0x%lx\n", size);
+    printf("code_space Size: 0x%lx\n", heap->code_space()->Size());
+
+    for(auto *p: *heap->code_space()) {
+      printf("code_space Page[%lx]: 0x%lx\n", p->ChunkAddress(), p->size());
+    }
+
+    printf("marking_mode: %d\n", marking_mode);
+    */
+    
+    
     RwxMemoryWriteScope scope("For writing flags.");
+    scope.SetInit(addr, size);
+    //printf("Out of setinit\n");
     ActivateSpace(heap->code_space(), marking_mode);
+
+    /////////////////// Second scope ///////////////////////
+    //printf("Second Scope\n");
+    RwxMemoryWriteScope scope2("For writing flags. (lo)");
+    if(heap->code_lo_space()->first_page() != NULL) {
+      addr = heap->code_lo_space()->first_page()->ChunkAddress();
+      size = heap->code_lo_space()->first_page()->size();
+      page_count = heap->code_lo_space()->PageCount();
+      size *= page_count;
+      //printf("code_space Start: 0x%lx\n", addr); 
+      //printf("code_space Size: 0x%lx\n", size);
+      scope2.SetInit(addr, size);
+    }
+    
+    /*
+    printf("code_lo_space Start: 0x%lx\n", heap->code_lo_space()->first_page()->ChunkAddress());
+    printf("code_lo_space Size: 0x%lx\n", heap->code_lo_space()->Size());
+    */
+
     ActivateSpace(heap->code_lo_space(), marking_mode);
   }
 
@@ -242,9 +288,12 @@ void ActivateSpaces(Heap* heap, MarkingMode marking_mode) {
 
   ActivateSpace(heap->trusted_space(), marking_mode);
   ActivateSpace(heap->trusted_lo_space(), marking_mode);
+
+  LOG_O;
 }
 
 void DeactivateSpaces(Heap* heap, MarkingMode marking_mode) {
+  LOG_E;
   DeactivateSpace(heap->old_space());
   DeactivateSpace(heap->lo_space());
   if (heap->new_space()) {
@@ -253,7 +302,30 @@ void DeactivateSpaces(Heap* heap, MarkingMode marking_mode) {
   }
   DeactivateSpace(heap->new_lo_space());
   {
+    /////////////////// First scope ///////////////////////
+    Address addr = heap->code_space()->first_page()->ChunkAddress();
+    Address last_addr = heap->code_space()->last_page()->ChunkAddress();
+    size_t size = (last_addr + heap->code_space()->last_page()->size()) - addr;
+    int page_count = heap->code_space()->CountTotalPages();
+    size = size * page_count;
+    /*
+    printf("code_space Start: 0x%lx\n", addr); 
+    printf("code_space size: 0x%lx\n", size);
+    printf("code_space Size: 0x%lx\n", heap->code_space()->Size());
+
+    for(auto *p: *heap->code_space()) {
+      printf("code_space Page[%lx]: 0x%lx\n", p->ChunkAddress(), p->size());
+    }
+
+    printf("marking_mode: %d\n", marking_mode);
+    
+    */
+    
     RwxMemoryWriteScope scope("For writing flags.");
+    scope.SetInit(addr, size);
+
+    //printf("marking_mode: %d\n", marking_mode);
+ 
     DeactivateSpace(heap->code_space());
     DeactivateSpace(heap->code_lo_space());
   }

@@ -62,6 +62,15 @@ class CodeSpaceWriteScope;
 
 #endif  // V8_HAS_PKU_JIT_WRITE_PROTECT
 
+// For Page size alignments
+#define PAGE_SIZE 4096  // Example page size of 4 KB
+
+// Macro to round up to the nearest page size
+#define ROUND_UP_TO_PAGE_SIZE(x) (((x) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
+
+// Macro to round down to the nearest page size
+#define ROUND_DOWN_TO_PAGE_SIZE(x) ((x) & ~(PAGE_SIZE - 1))
+
 // This scope is a wrapper for APRR/MAP_JIT machinery on MacOS on ARM64
 // ("Apple M1"/Apple Silicon) or Intel PKU (aka. memory protection keys)
 // with respective low-level semantics.
@@ -100,6 +109,14 @@ class V8_NODISCARD RwxMemoryWriteScope {
   // executable pages.
   V8_INLINE static bool IsSupported();
 
+  void SetInit(Address addr, size_t size) {
+    //printf("SetInit\n");
+    address_ = ROUND_DOWN_TO_PAGE_SIZE(addr);
+    size_ = ROUND_UP_TO_PAGE_SIZE(size);
+    SetWritable((void *)address_, size_);
+  }
+
+
 #if V8_HAS_PKU_JIT_WRITE_PROTECT
   static int memory_protection_key();
 
@@ -115,11 +132,17 @@ class V8_NODISCARD RwxMemoryWriteScope {
   friend class RwxMemoryWriteScopeForTesting;
   friend class wasm::CodeSpaceWriteScope;
 
+  WritableJitAllocation *scope_;
   // {SetWritable} and {SetExecutable} implicitly enters/exits the scope.
   // These methods are exposed only for the purpose of implementing other
   // scope classes that affect executable pages permissions.
   V8_INLINE static void SetWritable();
+  V8_INLINE static void SetWritable(void *addr, size_t size);
   V8_INLINE static void SetExecutable();
+  V8_INLINE static void SetExecutable(void *addr, size_t size);
+
+  Address address_ = 0; 
+  size_t size_ = 0;
 };
 
 class WritableJitPage;

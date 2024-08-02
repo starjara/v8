@@ -26,26 +26,94 @@ extern "C" {
   // #include "src/common/verse.h"
   #include <sys/mman.h>
 #undef MAP_TYPE
+  //#define LOG_E printf("[common/code-memory-access-inl.h] Enter: %s\n", __func__);
+  //#define LOG_O printf("[common/code-memory-access-inl.h] Exit: %s\n", __func__);
+  #define LOG_E
+  #define LOG_O
 }
 #endif
-
 
 namespace v8 {
 namespace internal {
 
 RwxMemoryWriteScope::RwxMemoryWriteScope(const char* comment) {
   if (!v8_flags.jitless) {
+
+#if V8_TARGET_ARCH_RISCV64
+    LOG_E
+      //printf("\t%s\n", comment);
+      /*
+    if(this->scope == NULL) {
+      printf("scope not initialzed\n");
+      return ;
+    }
+    if(this->scope->address() == 0) {
+      printf("address not initizlied\n");
+      return ;
+    }
+      */
+    /*
+    if(address_ == 0 || size_ == 0) {
+      return ;
+    }
+    void *addr = (void *)address_;
+    printf("\taddress_: 0x%lx\n", address_);
+
+    size_t size = size_;
+    printf("\tsize_: 0x%lx\n", size_);
+    SetWritable(addr, size);
+    */
+#else
     SetWritable();
+#endif
   }
 }
 
 RwxMemoryWriteScope::~RwxMemoryWriteScope() {
   if (!v8_flags.jitless) {
-    SetExecutable();
+ #if V8_TARGET_ARCH_RISCV64
+    LOG_E
+      /*
+    if(this->scope == NULL) {
+      printf("scope not initialzed\n");
+      return ;
+    }
+    if(this->scope->address() == 0) {
+      printf("address not initizlied\n");
+      return ;
+    } 
+    void *addr = (void *)(this->scope->address());
+    printf("0x%lx\n", (unsigned long)addr);
+    
+    size_t size = this->scope->size();
+    printf("0x%lx\n", size);
+      */
+    void *addr = (void *)address_;
+    //printf("\t0x%lx\n", address_);
+
+    size_t size = size_;
+    //printf("\t0x%lx\n", size_);
+    SetExecutable(addr, size);
+#else
+   SetExecutable();
+#endif
   }
 }
 
-WritableJitAllocation::~WritableJitAllocation() = default;
+  WritableJitAllocation::~WritableJitAllocation() {
+    LOG_E
+      /*
+      if(write_scope_) {
+	//printf("\tHave write scope\n");
+	//printf("\tAddr: 0x%lx\tSize: 0x%lx\n", this->address(), this->size());
+	//printf("\tPage Addr: 0x%lx\tPage Size: 0x%lx\n", page_ref_->Address(), page_ref_->Size());
+	//mprotect((void *)this->address(), this->size(), PROT_READ | PROT_EXEC);
+	//mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_EXEC | PROT_READ);
+      }
+      else
+      //printf("No WriteScope\n");
+      */
+  }//= default;
 
 WritableJitAllocation::WritableJitAllocation(
     Address addr, size_t size, ThreadIsolation::JitAllocationType type,
@@ -58,22 +126,42 @@ WritableJitAllocation::WritableJitAllocation(
       page_ref_(ThreadIsolation::LookupJitPage(addr, size)),
       allocation_(source == JitAllocationSource::kRegister
                       ? page_ref_->RegisterAllocation(addr, size, type)
-		  : page_ref_->LookupAllocation(addr, size, type)) {}
+		  : page_ref_->LookupAllocation(addr, size, type)) { LOG_E
+    /*
+	printf("\tWith write scope\n");
+	printf("\tAddr: 0x%lx\tSize: 0x%lx\n", this->address(), this->size());
+	printf("\tPage Addr: 0x%lx\tPage Size: 0x%lx\n", page_ref_->Address(), page_ref_->Size());
+    */
+	write_scope_->SetInit(page_ref_->Address(), page_ref_->Size());
+	//mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_WRITE | PROT_READ | PROT_EXEC);
+}
 
 WritableJitAllocation::WritableJitAllocation(
     Address addr, size_t size, ThreadIsolation::JitAllocationType type)
-  : address_(addr), allocation_(size, type) {}
+  : address_(addr), allocation_(size, type) { LOG_E
+    /*
+	printf("\tWithout write scope\n");
+	printf("\tAddr: 0x%lx\tSize: 0x%lx\n", this->address(), this->size());
+    */
+    //mprotect((void *)addr, size, PROT_WRITE | PROT_READ | PROT_EXEC);
+}
 
 // static
 WritableJitAllocation WritableJitAllocation::ForNonExecutableMemory(
     Address addr, size_t size, ThreadIsolation::JitAllocationType type) {
-  // printf("NonExecutableMemory WriteableJitAllocation\n");
+      LOG_E
+	/*
+	printf("\tNonExecutable\n");
+	printf("\tAddr: 0x%lx\tSize: 0x%lx\n", addr, size);
+	*/
   return WritableJitAllocation(addr, size, type);
 }
 
 // static
 WritableJitAllocation WritableJitAllocation::ForInstructionStream(
     Tagged<InstructionStream> istream) {
+      LOG_E
+	//printf("\tInstructionStream\n");
   return WritableJitAllocation(
       istream->address(), istream->Size(),
       ThreadIsolation::JitAllocationType::kInstructionStream,
@@ -102,27 +190,39 @@ void WritableJitAllocation::WriteHeaderSlot(T value) {
   // This assert is no strict requirement, it just guards against
   // non-implemented functionality.
   static_assert(!is_taggable_v<T>);
-
+      LOG_E
+	//printf("First\n");
+      //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   if constexpr (offset == HeapObject::kMapOffset) {
     TaggedField<T, offset>::Relaxed_Store_Map_Word(
         HeapObject::FromAddress(address_), value);
   } else {
     WriteMaybeUnalignedValue<T>(address_ + offset, value);
   }
+  //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+      LOG_O
 }
 
 template <typename T, size_t offset>
 void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, ReleaseStoreTag) {
   // These asserts are no strict requirements, they just guard against
   // non-implemented functionality.
+      LOG_E
+	//printf("Second\n");
+      //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   static_assert(offset != HeapObject::kMapOffset);
 
   TaggedField<T, offset>::Release_Store(HeapObject::FromAddress(address_),
                                         value);
+  //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+      LOG_O
 }
 
 template <typename T, size_t offset>
 void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, RelaxedStoreTag) {
+  LOG_E
+    //printf("Third\n");
+  // mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   if constexpr (offset == HeapObject::kMapOffset) {
     TaggedField<T, offset>::Relaxed_Store_Map_Word(
         HeapObject::FromAddress(address_), value);
@@ -130,19 +230,28 @@ void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, RelaxedStoreTag) {
     TaggedField<T, offset>::Relaxed_Store(HeapObject::FromAddress(address_),
                                           value);
   }
+  //   mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+  LOG_O
 }
 
 template <typename T, size_t offset>
 void WritableJitAllocation::WriteProtectedPointerHeaderSlot(Tagged<T> value,
                                                             RelaxedStoreTag) {
+      LOG_E
+	//mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   static_assert(offset != HeapObject::kMapOffset);
   TaggedField<T, offset, TrustedSpaceCompressionScheme>::Relaxed_Store(
       HeapObject::FromAddress(address_), value);
+  //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+      LOG_O
 }
 
 template <typename T>
 V8_INLINE void WritableJitAllocation::WriteHeaderSlot(Address address, T value,
                                                       RelaxedStoreTag tag) {
+      LOG_E
+	//printf("Fourth\n");
+      //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   CHECK_EQ(allocation_.Type(),
            ThreadIsolation::JitAllocationType::kInstructionStream);
   size_t offset = address - address_;
@@ -160,29 +269,42 @@ V8_INLINE void WritableJitAllocation::WriteHeaderSlot(Address address, T value,
     default:
       UNREACHABLE();
   }
+  // mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+      LOG_O
 }
 
 void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
-  mprotect((void *)(address_ + dst_offset), num_bytes, PROT_READ | PROT_WRITE);
+      LOG_E
+	//mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
-  mprotect((void *)(address_ + dst_offset), num_bytes, PROT_READ | PROT_EXEC);
+      //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+      LOG_O
 }
 
 void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
+      LOG_E
+	//mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
+      //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+      //printf("End of the CopyData\n");
+      LOG_O
 }
 
 void WritableJitAllocation::ClearBytes(size_t offset, size_t len) {
+      LOG_E
+	//mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   memset(reinterpret_cast<void*>(address_ + offset), 0, len);
+      //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+      LOG_O
 }
 
 WritableJitPage::~WritableJitPage() = default;
 
 WritableJitPage::WritableJitPage(Address addr, size_t size)
     : write_scope_("WritableJitPage"),
-      page_ref_(ThreadIsolation::LookupJitPage(addr, size)) {}
+      page_ref_(ThreadIsolation::LookupJitPage(addr, size)) {write_scope_.SetInit(page_ref_.Address(), page_ref_.Size());}
 
 WritableJitAllocation WritableJitPage::LookupAllocationContaining(
     Address addr) {
@@ -212,6 +334,20 @@ V8_INLINE WritableFreeSpace::WritableFreeSpace(base::Address addr, size_t size,
 template <typename T, size_t offset>
 void WritableFreeSpace::WriteHeaderSlot(Tagged<T> value,
                                         RelaxedStoreTag) const {
+      LOG_E
+	//printf("Here\n");
+	//printf("\taddr: 0x%lx\tsize: 0x%lx\n", this->address_, this->size_);
+      /*
+      {
+      if(this->Executable()) {
+	mprotect((void *)this->address_, this->size_, PROT_READ | PROT_EXEC | PROT_WRITE);
+      }
+      else {
+	mprotect((void *)this->address_, this->size_, PROT_READ | PROT_WRITE);
+      }
+      }
+      */
+      //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC | PROT_WRITE);
   Tagged<HeapObject> object = HeapObject::FromAddress(address_);
   // TODO(v8:13355): add validation before the write.
   if constexpr (offset == HeapObject::kMapOffset) {
@@ -219,14 +355,18 @@ void WritableFreeSpace::WriteHeaderSlot(Tagged<T> value,
   } else {
     TaggedField<T, offset>::Relaxed_Store(object, value);
   }
+  //mprotect((void *)page_ref_->Address(), page_ref_->Size(), PROT_READ | PROT_EXEC );
+      LOG_O
 }
 
 template <size_t offset>
 void WritableFreeSpace::ClearTagged(size_t count) const {
   base::Address start = address_ + offset;
   // TODO(v8:13355): add validation before the write.
+      LOG_E
   MemsetTagged(ObjectSlot(start), Tagged<Object>(kClearedFreeMemoryValue),
                count);
+      LOG_O
 }
 
 #if V8_HAS_PTHREAD_JIT_WRITE_PROTECT
@@ -295,20 +435,32 @@ void RwxMemoryWriteScope::SetExecutable() {
 }
 
 #elif V8_TARGET_ARCH_RISCV64
-  //static
-  bool RwxMemoryWriteScope::IsSupported() {return true;}
+//static
+bool RwxMemoryWriteScope::IsSupported() { return true; }
 
-  //static
-  void RwxMemoryWriteScope::SetWritable()
-  {
+// static
+  void RwxMemoryWriteScope::SetWritable() {
+    LOG_E
+      //printf("Nothing\n");
+  }
+  void RwxMemoryWriteScope::SetWritable(void *addr, size_t size) {
+    LOG_E
+      //printf("\tAddr: 0x%lx\tSize: 0x%lx\n", addr, size);
+      mprotect(addr, size, PROT_READ | PROT_EXEC | PROT_WRITE);
+    LOG_O
   }
 
-  //static
-  void RwxMemoryWriteScope::SetExecutable()
-  {
-    // verse_enter(0);
-    // verse_map_executable((__u64) address_, (__u64) address_, 4096);
-    // verse_exit(1);
+
+//static
+  void RwxMemoryWriteScope::SetExecutable() {
+    LOG_E
+      //printf("Nothing\n");
+  }
+  void RwxMemoryWriteScope::SetExecutable(void *addr, size_t size) {
+    LOG_E
+      //printf("\tAddr: 0x%lx\tSize: 0x%lx\n", addr, size);
+      mprotect(addr, size, PROT_READ | PROT_EXEC);
+    LOG_O
   }
   
 #else  // !V8_HAS_PTHREAD_JIT_WRITE_PROTECT && !V8_TRY_USE_PKU_JIT_WRITE_PROTECT
@@ -317,7 +469,7 @@ void RwxMemoryWriteScope::SetExecutable() {
 bool RwxMemoryWriteScope::IsSupported() { return false; }
 
 // static
-void RwxMemoryWriteScope::SetWritable() {}
+  void RwxMemoryWriteScope::SetWritable() {} 
 
 // static
 void RwxMemoryWriteScope::SetExecutable() {}

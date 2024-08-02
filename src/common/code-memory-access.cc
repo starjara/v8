@@ -414,6 +414,7 @@ ThreadIsolation::JitPageReference::AllocationContaining(
 // static
 void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
   CFIMetadataWriteScope write_scope("Adding new executable memory.");
+  write_scope.SetInit(address, size);
 
   // Add for print
   // printf("RegisterJitPage\n");

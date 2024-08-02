@@ -168,6 +168,7 @@ size_t MemoryChunk::OffsetMaybeOutOfRange(Address addr) const {
 void MemoryChunk::SetFlagSlow(Flag flag) {
   if (executable()) {
     RwxMemoryWriteScope scope("Set a MemoryChunk flag in executable memory.");
+    scope.SetInit(this->Metadata()->area_start(), this->Metadata()->size());
     SetFlagUnlocked(flag);
   } else {
     SetFlagNonExecutable(flag);

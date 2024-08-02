@@ -442,6 +442,7 @@ uint8_t* CodeRange::RemapEmbeddedBuiltins(Isolate* isolate,
     }
     RwxMemoryWriteScope rwx_write_scope(
         "Enable write access to copy the blob code into the code range");
+    rwx_write_scope.SetInit(code_region.begin(), code_region.size());
     memcpy(embedded_blob_code_copy, embedded_blob_code,
            embedded_blob_code_size);
   } else {

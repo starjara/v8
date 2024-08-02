@@ -133,6 +133,8 @@
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
 
+#define LOG_E printf("[heap/heap.cc] Enter: %s\n", __func__)
+
 namespace v8 {
 namespace internal {
 
@@ -3812,6 +3814,8 @@ void Heap::Unmark() {
   DCHECK(v8_flags.sticky_mark_bits);
   DCHECK_NULL(new_space());
 
+  LOG_E;
+  
   auto unmark_space = [](auto& space) {
     for (auto* page : space) {
       page->marking_bitmap()->template Clear<AccessMode::NON_ATOMIC>();
