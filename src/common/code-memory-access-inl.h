@@ -58,9 +58,12 @@ RwxMemoryWriteScope::~RwxMemoryWriteScope() {
   LOG_O;
 }
 
-  WritableJitAllocation::~WritableJitAllocation() {
-    LOG_E;
-    if(address_ + size() > ROUND_DOWN_TO_PAGE_SIZE(address_) + ROUND_UP_TO_PAGE_SIZE(this->size())) {
+WritableJitAllocation::~WritableJitAllocation() {
+  LOG_E;
+  if(!write_scope_) {
+    return ;
+  }
+  if(address_ + size() > ROUND_DOWN_TO_PAGE_SIZE(address_) + ROUND_UP_TO_PAGE_SIZE(this->size())) {
       mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE, PROT_READ |PROT_WRITE| PROT_EXEC);
       verse_munmap(ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE);
   }
@@ -68,9 +71,9 @@ RwxMemoryWriteScope::~RwxMemoryWriteScope() {
     mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()), PROT_READ |PROT_WRITE| PROT_EXEC);
     verse_munmap(ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()));
   }
-    LOG_O;
-  } //= default;
-
+  LOG_O;
+} //= default;
+  
 
 WritableJitAllocation::WritableJitAllocation(
     Address addr, size_t size, ThreadIsolation::JitAllocationType type,
