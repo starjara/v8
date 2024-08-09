@@ -38,20 +38,25 @@ void InstructionStream::Relocate(WritableJitAllocation& jit_allocation,
 InstructionStream::WriteBarrierPromise InstructionStream::RelocateFromDesc(
     WritableJitAllocation& jit_allocation, Heap* heap, const CodeDesc& desc,
     Address constant_pool, const DisallowGarbageCollection& no_gc) {
+  //printf("Set Variable\n");
   WriteBarrierPromise write_barrier_promise;
   Assembler* origin = desc.origin;
   const int mode_mask = RelocInfo::PostCodegenRelocationMask();
+  //printf("Set Variable end\n");
   for (WritableRelocIterator it(jit_allocation, *this, constant_pool,
                                 mode_mask);
        !it.done(); it.next()) {
     // IMPORTANT:
     // this code needs be stay in sync with RelocateFromDescWriteBarriers below.
 
+    // printf("In for\n");
     RelocInfo::Mode mode = it.rinfo()->rmode();
     if (RelocInfo::IsEmbeddedObjectMode(mode)) {
       Handle<HeapObject> p = it.rinfo()->target_object_handle(origin);
+      // printf("Set_target_object\n");
       it.rinfo()->set_target_object(*this, *p, UNSAFE_SKIP_WRITE_BARRIER,
                                     SKIP_ICACHE_FLUSH);
+      // printf("Set_target_object\n");
       write_barrier_promise.RegisterAddress(it.rinfo()->pc());
     } else if (RelocInfo::IsCodeTargetMode(mode)) {
       // Rewrite code handles to direct pointers to the first instruction in the
@@ -60,9 +65,11 @@ InstructionStream::WriteBarrierPromise InstructionStream::RelocateFromDesc(
       DCHECK(IsCode(*p));
       Tagged<InstructionStream> target_istream =
           Code::cast(*p)->instruction_stream();
+      // printf("Set_target_address\n");
       it.rinfo()->set_target_address(*this, target_istream->instruction_start(),
                                      UNSAFE_SKIP_WRITE_BARRIER,
                                      SKIP_ICACHE_FLUSH);
+      // printf("Set_target_address\n");
       write_barrier_promise.RegisterAddress(it.rinfo()->pc());
     } else if (RelocInfo::IsNearBuiltinEntry(mode)) {
       // Rewrite builtin IDs to PC-relative offset to the builtin entry point.
@@ -71,9 +78,11 @@ InstructionStream::WriteBarrierPromise InstructionStream::RelocateFromDesc(
       // This won't trigger a write barrier, but setting mode to
       // UPDATE_WRITE_BARRIER to make it clear that we didn't forget about it
       // below.
+      // printf("Set_target_address2\n");
       it.rinfo()->set_target_address(*this, p, UPDATE_WRITE_BARRIER,
                                      SKIP_ICACHE_FLUSH);
       DCHECK_EQ(p, it.rinfo()->target_address());
+      // printf("Set_target_address2\n");
     } else if (RelocInfo::IsWasmStubCall(mode)) {
 #if V8_ENABLE_WEBASSEMBLY
       // Map wasm stub id to builtin.
@@ -93,6 +102,7 @@ InstructionStream::WriteBarrierPromise InstructionStream::RelocateFromDesc(
       it.rinfo()->apply(delta);
     }
   }
+  //printf("END\n");
   return write_barrier_promise;
 }
 

@@ -163,7 +163,7 @@ void InstructionStream::Finalize(Tagged<Code> code,
     printf("\tpromise.emplace\n");
     printf("\taddress: 0x%lx\tbodysize: 0x%lx\n", address(), InstructionStream::SizeFor(body_size())); 
     printf("\taddress: 0x%lx\tbodysize: 0x%lx\n", ROUND_DOWN_TO_PAGE_SIZE(address()), ROUND_UP_TO_PAGE_SIZE(body_size())); 
-    */
+    */ 
     if(address() + body_size() >= ROUND_DOWN_TO_PAGE_SIZE(address()) + ROUND_UP_TO_PAGE_SIZE(body_size())) {
       mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(address()),
 	       ROUND_UP_TO_PAGE_SIZE(body_size()) + PAGE_SIZE,

@@ -33,6 +33,15 @@ namespace internal {
 // - RwxMemoryWriteScopeForTesting:
 //     Same, but for use in testing.
 
+// Page size alignment macros  
+#define PAGE_SIZE 4096  // Example page size of 4 KB
+
+// Macro to round up to the nearest page size
+#define ROUND_UP_TO_PAGE_SIZE(x) (((x) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
+
+// Macro to round down to the nearest page size
+#define ROUND_DOWN_TO_PAGE_SIZE(x) ((x) & ~(PAGE_SIZE - 1))
+
 class RwxMemoryWriteScopeForTesting;
 namespace wasm {
 class CodeSpaceWriteScope;
@@ -140,6 +149,8 @@ class V8_EXPORT ThreadIsolation {
   static bool Enabled();
   static void Initialize(ThreadIsolatedAllocator* allocator);
 
+  V8_INLINE ~ThreadIsolation();
+  
   enum class JitAllocationType {
     kInstructionStream,
     kWasmCode,

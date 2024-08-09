@@ -26,23 +26,51 @@ extern "C" {
 }
 #endif
 
+//#define LOG_E printf("[common/code-memory-access-inl.h] Enter: %s\n", __FUNCTION__)
+//#define LOG_O printf("[common/code-memory-access-inl.h] Exit: %s\n", __FUNCTION__)
+
+#define LOG_E
+#define LOG_O
 
 namespace v8 {
 namespace internal {
 
+ThreadIsolation::~ThreadIsolation() {
+  LOG_E;
+  verse_destroy(0);
+  LOG_O;
+}
+
 RwxMemoryWriteScope::RwxMemoryWriteScope(const char* comment) {
+  LOG_E;
+  //printf("\t%s\n", comment);
   if (!v8_flags.jitless) {
     SetWritable();
   }
+  LOG_O;
 }
 
 RwxMemoryWriteScope::~RwxMemoryWriteScope() {
+  LOG_E;
   if (!v8_flags.jitless) {
     SetExecutable();
   }
+  LOG_O;
 }
 
-WritableJitAllocation::~WritableJitAllocation() = default;
+  WritableJitAllocation::~WritableJitAllocation() {
+    LOG_E;
+    if(address_ + size() > ROUND_DOWN_TO_PAGE_SIZE(address_) + ROUND_UP_TO_PAGE_SIZE(this->size())) {
+      mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE, PROT_READ |PROT_WRITE| PROT_EXEC);
+      verse_munmap(ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE);
+  }
+  else {
+    mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()), PROT_READ |PROT_WRITE| PROT_EXEC);
+    verse_munmap(ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()));
+  }
+    LOG_O;
+  } //= default;
+
 
 WritableJitAllocation::WritableJitAllocation(
     Address addr, size_t size, ThreadIsolation::JitAllocationType type,
@@ -55,7 +83,23 @@ WritableJitAllocation::WritableJitAllocation(
       page_ref_(ThreadIsolation::LookupJitPage(addr, size)),
       allocation_(source == JitAllocationSource::kRegister
                       ? page_ref_->RegisterAllocation(addr, size, type)
-		  : page_ref_->LookupAllocation(addr, size, type)) {}
+		  : page_ref_->LookupAllocation(addr, size, type)) {
+  // verse_enter(0);
+  LOG_E;
+  //printf("\tAddr: 0x%lx\tSize: 0x%zx\n", addr, size);
+  //printf("\tAligned Addr: 0x%lx\tAligned Size: 0x%zx\n", ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size));
+
+  if(addr + size > ROUND_DOWN_TO_PAGE_SIZE(addr) + ROUND_UP_TO_PAGE_SIZE(size)) {
+    mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size) + PAGE_SIZE, PROT_READ|PROT_EXEC);
+    verse_mmap(ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size) + PAGE_SIZE, PROT_READ|PROT_WRITE);
+  }
+  else {
+    mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size), PROT_READ|PROT_EXEC);
+    verse_mmap(ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size), PROT_READ|PROT_WRITE);
+  }
+  LOG_O;
+  // verse_exit(0);
+}
 
 WritableJitAllocation::WritableJitAllocation(
     Address addr, size_t size, ThreadIsolation::JitAllocationType type)
@@ -98,48 +142,99 @@ template <typename T, size_t offset>
 void WritableJitAllocation::WriteHeaderSlot(T value) {
   // This assert is no strict requirement, it just guards against
   // non-implemented functionality.
+  LOG_E;
+  // printf("\tFirst\n");
   static_assert(!is_taggable_v<T>);
 
   if constexpr (offset == HeapObject::kMapOffset) {
+     verse_write(address_, &value, sizeof(value));
+    /*
     TaggedField<T, offset>::Relaxed_Store_Map_Word(
         HeapObject::FromAddress(address_), value);
+    */
   } else {
+    verse_write(address_ + offset, &value, sizeof(value));
+    /*
     WriteMaybeUnalignedValue<T>(address_ + offset, value);
+    */
   }
+  LOG_O;
 }
 
 template <typename T, size_t offset>
 void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, ReleaseStoreTag) {
   // These asserts are no strict requirements, they just guard against
   // non-implemented functionality.
+  LOG_E;
+  // printf("\tSecond\n");
   static_assert(offset != HeapObject::kMapOffset);
 
+  verse_write(address_ + offset, &value, sizeof(value));
+  /*
   TaggedField<T, offset>::Release_Store(HeapObject::FromAddress(address_),
                                         value);
+  */
+  LOG_O;
 }
 
 template <typename T, size_t offset>
 void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, RelaxedStoreTag) {
+  LOG_E;
+  // printf("\tThird\n");
   if constexpr (offset == HeapObject::kMapOffset) {
+    verse_write(address_ + offset, &value, sizeof(value));
+    /*
     TaggedField<T, offset>::Relaxed_Store_Map_Word(
         HeapObject::FromAddress(address_), value);
+    */
   } else {
+    verse_write(address_ + offset, &value, sizeof(value));
+    /*
     TaggedField<T, offset>::Relaxed_Store(HeapObject::FromAddress(address_),
                                           value);
+    */
   }
+  LOG_O;
 }
 
 template <typename T, size_t offset>
 void WritableJitAllocation::WriteProtectedPointerHeaderSlot(Tagged<T> value,
                                                             RelaxedStoreTag) {
+  LOG_E;
   static_assert(offset != HeapObject::kMapOffset);
+
+  /*
+  printf("\taddress_ : 0x%llx\n", address_);
+  printf("\toffset: 0x%x\n", offset);
+  printf("\tvalue_of_the_address: 0x%llx\n", *(unsigned long long *)address_);
+  printf("\tvalue_of_the_addr+offset: 0x%llx\n", *(unsigned long long *)(address_ + offset));
+  printf("\tValue: 0x%x\n", value);
+
+  auto t = TaggedField<T, offset, TrustedSpaceCompressionScheme>::Relaxed_Load(HeapObject::FromAddress(address_));
+  printf("0x%lx\n", t);
+  */
+
+  verse_write((address_ + offset), &value, sizeof(value));
+
+  /*
+  t = TaggedField<T, offset, TrustedSpaceCompressionScheme>::Relaxed_Load(HeapObject::FromAddress(address_));
+  printf("0x%lx\n", t);
+
+  printf("\tTarget: 0x%llx\n", *(unsigned long long *)address_);
+  printf("\tTarget: 0x%llx\n", *(unsigned long long *)(address_ + offset));
+  */
+    /*
   TaggedField<T, offset, TrustedSpaceCompressionScheme>::Relaxed_Store(
       HeapObject::FromAddress(address_), value);
+    */
+  LOG_O;
 }
 
 template <typename T>
 V8_INLINE void WritableJitAllocation::WriteHeaderSlot(Address address, T value,
                                                       RelaxedStoreTag tag) {
+  LOG_E;
+  //printf("\tForth\n");
   CHECK_EQ(allocation_.Type(),
            ThreadIsolation::JitAllocationType::kInstructionStream);
   size_t offset = address - address_;
@@ -157,29 +252,62 @@ V8_INLINE void WritableJitAllocation::WriteHeaderSlot(Address address, T value,
     default:
       UNREACHABLE();
   }
+  LOG_O;
 }
 
 void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
-  // printf("emit code in here addr : 0x%lx, dst_offset : 0x%zx, src : 0x%s, num_bytes : 0x%zx\n", address_, dst_offset, src, num_bytes);
+  LOG_E;
   
-  verse_enter(0);
+  // verse_enter(0);
   // char tmp[num_bytes];
   verse_write((__u64)(address_ + dst_offset), (void *)src, num_bytes);
   // CopyBytes(reinterpret_cast<uint8_t*>(tmp), reinterpret_cast<uint8_t*>(address_ + dst_offset), num_bytes);
   // printf("Written code : 0x%lx, 0x%s\n", address_ + dst_offset, tmp);
-  verse_exit(1);
+  // verse_exit(1);
+
+  LOG_O;
 
   //CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
 }
 
 void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
-  CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
+  LOG_E;
+  // verse_enter(0);
+  verse_write((__u64)(address_ + dst_offset), (void *) src, num_bytes);
+  // verse_exit(1);
+  //CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
+  LOG_O;
 }
 
 void WritableJitAllocation::ClearBytes(size_t offset, size_t len) {
-  memset(reinterpret_cast<void*>(address_ + offset), 0, len);
+  LOG_E;
+  /*
+  printf("\taddress: 0x%lx\n", address_);
+  printf("\tsize: 0x%lx\n", this->size());
+  printf("\toffset: 0x%lx\n", offset);
+  */
+  if(address_ + this->size() <= address_ + offset) {
+    // printf("\tsize over\n");
+    memset(reinterpret_cast<void*>(address_ + offset), 0, len);
+  }
+  else {
+    // clear Mem
+    unsigned char tmp = 0;
+    // unsigned char ret = 0;
+    // verse_read((__u64)(address_ + offset), &ret, sizeof(ret));
+    // printf("\tRet : 0x%lx\n", ret);
+    for (size_t i=0; i<len; i+=sizeof(tmp)) {
+      if(address_ + offset + i >= address_ + size()) {
+	break;
+      }
+      verse_write((__u64)(address_ + offset + i), &tmp, sizeof(tmp));
+    }
+    // verse_read((__u64)(address_ + offset), &ret, sizeof(ret));
+    // printf("\tRet : 0x%lx\n", ret);
+  }
+  LOG_O;
 }
 
 WritableJitPage::~WritableJitPage() = default;
@@ -216,6 +344,8 @@ V8_INLINE WritableFreeSpace::WritableFreeSpace(base::Address addr, size_t size,
 template <typename T, size_t offset>
 void WritableFreeSpace::WriteHeaderSlot(Tagged<T> value,
                                         RelaxedStoreTag) const {
+  LOG_E;
+  //printf("\tFifth\n");
   Tagged<HeapObject> object = HeapObject::FromAddress(address_);
   // TODO(v8:13355): add validation before the write.
   if constexpr (offset == HeapObject::kMapOffset) {
@@ -223,14 +353,17 @@ void WritableFreeSpace::WriteHeaderSlot(Tagged<T> value,
   } else {
     TaggedField<T, offset>::Relaxed_Store(object, value);
   }
+  LOG_O;
 }
 
 template <size_t offset>
 void WritableFreeSpace::ClearTagged(size_t count) const {
   base::Address start = address_ + offset;
   // TODO(v8:13355): add validation before the write.
+  LOG_E;
   MemsetTagged(ObjectSlot(start), Tagged<Object>(kClearedFreeMemoryValue),
                count);
+  LOG_O;
 }
 
 #if V8_HAS_PTHREAD_JIT_WRITE_PROTECT
@@ -305,14 +438,17 @@ void RwxMemoryWriteScope::SetExecutable() {
   //static
   void RwxMemoryWriteScope::SetWritable()
   {
+    LOG_E;
+    verse_enter(0);
+    LOG_O;
   }
 
   //static
   void RwxMemoryWriteScope::SetExecutable()
   {
-    // verse_enter(0);
-    // verse_map_executable((__u64) address_, (__u64) address_, 4096);
-    // verse_exit(1);
+    LOG_E;
+    verse_exit(1);
+    LOG_O;
   }
   
 #else  // !V8_HAS_PTHREAD_JIT_WRITE_PROTECT && !V8_TRY_USE_PKU_JIT_WRITE_PROTECT
@@ -321,10 +457,10 @@ void RwxMemoryWriteScope::SetExecutable() {
 bool RwxMemoryWriteScope::IsSupported() { return false; }
 
 // static
-void RwxMemoryWriteScope::SetWritable() {}
+  void RwxMemoryWriteScope::SetWritable() {}
 
 // static
-void RwxMemoryWriteScope::SetExecutable() {}
+  void RwxMemoryWriteScope::SetExecutable() {}
 
 #endif  // V8_HAS_PTHREAD_JIT_WRITE_PROTECT
 

@@ -14,6 +14,9 @@ extern "C" {
 }
 #endif
 
+#define LOG_E printf("[common/code-memory-access.cc] Enter: %s\n", __FUNCTION__)
+#define LOG_O printf("[common/code-memory-access.cc] Exit: %s\n", __FUNCTION__)
+
 namespace v8 {
 namespace internal {
 
@@ -81,13 +84,10 @@ void ThreadIsolation::Delete(T* ptr) {
 // static
 void ThreadIsolation::Initialize(
     ThreadIsolatedAllocator* thread_isolated_allocator) {
+  //LOG_E;
 #if DEBUG
   trusted_data_.initialized = true;
 #endif
-
-  // Add for print
-  // printf("Initialize\n");
-  
   bool enable = thread_isolated_allocator != nullptr && !v8_flags.jitless;
 
 #ifdef V8_TARGET_ARCH_RISCV64
@@ -144,7 +144,7 @@ void ThreadIsolation::Initialize(
       v8::PageAllocator::Permission::kRead,
       base::MemoryProtectionKey::kDefaultProtectionKey);
 #endif
-
+  LOG_O;
 }
 
 // static
@@ -421,18 +421,18 @@ void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
   CheckForRegionOverlap(*trusted_data_.jit_pages_, address, size);
   JitPage* jit_page;
   
+  ConstructNew(&jit_page, size);
+  trusted_data_.jit_pages_->emplace(address, jit_page);
+
 #if V8_TARGET_ARCH_RISCV64
     memset(reinterpret_cast<void *>(address), 0, size);
 
+  /*
     verse_enter(0);
     verse_mmap(address , address , size, PROT_READ | PROT_WRITE);
-    verse_exit(0);
-    
-    ConstructNew(&jit_page, size);
-#else
-   ConstructNew(&jit_page, size);
+    verse_exit(1);
+  */
 #endif
-  trusted_data_.jit_pages_->emplace(address, jit_page);
 }
 
 void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
@@ -479,10 +479,8 @@ void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
   }
   Delete(to_delete);
  #if V8_TARGET_ARCH_RISCV64
-   verse_enter(0);
    // printf("Removing Jit Page : 0x%lx, 0x%lx\n", address, size);
-   verse_munmap(address, size);
-   verse_exit(0);
+   // verse_munmap(address, size);
  #endif
 
 }
