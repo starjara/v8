@@ -26,8 +26,8 @@ extern "C" {
 }
 #endif
 
-//#define LOG_E printf("[common/code-memory-access-inl.h] Enter: %s\n", __FUNCTION__)
-//#define LOG_O printf("[common/code-memory-access-inl.h] Exit: %s\n", __FUNCTION__)
+// #define LOG_E printf("[common/code-memory-access-inl.h] Enter: %s\n", __FUNCTION__)
+// #define LOG_O printf("[common/code-memory-access-inl.h] Exit: %s\n", __FUNCTION__)
 
 #define LOG_E
 #define LOG_O
@@ -64,8 +64,8 @@ WritableJitAllocation::~WritableJitAllocation() {
     return ;
   }
   if(address_ + size() > ROUND_DOWN_TO_PAGE_SIZE(address_) + ROUND_UP_TO_PAGE_SIZE(this->size())) {
-      mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE, PROT_READ |PROT_WRITE| PROT_EXEC);
-      verse_munmap(ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE);
+    mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE, PROT_READ |PROT_WRITE| PROT_EXEC);
+    verse_munmap(ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE);
   }
   else {
     mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()), PROT_READ |PROT_WRITE| PROT_EXEC);
@@ -89,8 +89,10 @@ WritableJitAllocation::WritableJitAllocation(
 		  : page_ref_->LookupAllocation(addr, size, type)) {
   // verse_enter(0);
   LOG_E;
-  //printf("\tAddr: 0x%lx\tSize: 0x%zx\n", addr, size);
-  //printf("\tAligned Addr: 0x%lx\tAligned Size: 0x%zx\n", ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size));
+  /*
+  printf("\tAddr: 0x%lx\tSize: 0x%zx\n", addr, size);
+  printf("\tAligned Addr: 0x%lx\tAligned Size: 0x%zx\n", ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size));
+  */
 
   if(addr + size > ROUND_DOWN_TO_PAGE_SIZE(addr) + ROUND_UP_TO_PAGE_SIZE(size)) {
     mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size) + PAGE_SIZE, PROT_READ|PROT_EXEC);
@@ -450,7 +452,7 @@ void RwxMemoryWriteScope::SetExecutable() {
   void RwxMemoryWriteScope::SetExecutable()
   {
     LOG_E;
-    verse_exit(1);
+    verse_exit(0);
     LOG_O;
   }
   

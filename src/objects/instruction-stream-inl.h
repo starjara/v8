@@ -164,21 +164,21 @@ void InstructionStream::Finalize(Tagged<Code> code,
     printf("\taddress: 0x%lx\tbodysize: 0x%lx\n", address(), InstructionStream::SizeFor(body_size())); 
     printf("\taddress: 0x%lx\tbodysize: 0x%lx\n", ROUND_DOWN_TO_PAGE_SIZE(address()), ROUND_UP_TO_PAGE_SIZE(body_size())); 
     */
-    if(address() + body_size() >= ROUND_DOWN_TO_PAGE_SIZE(address()) + ROUND_UP_TO_PAGE_SIZE(body_size())) {
-      mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(address()),
-	       ROUND_UP_TO_PAGE_SIZE(body_size()) + PAGE_SIZE,
-	       PROT_READ | PROT_WRITE | PROT_EXEC);
-    }
-    else {
-      mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(address()),
-	       ROUND_UP_TO_PAGE_SIZE(body_size()) + PAGE_SIZE,
-	       PROT_READ | PROT_WRITE | PROT_EXEC);
-      /*
-      mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(address()),
-	       ROUND_UP_TO_PAGE_SIZE(body_size()),
-	       PROT_READ | PROT_WRITE | PROT_EXEC);
-	*/
-    }
+    // if(address() + body_size() >= ROUND_DOWN_TO_PAGE_SIZE(address()) + ROUND_UP_TO_PAGE_SIZE(body_size())) {
+    //   mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(address()),
+    // 	       ROUND_UP_TO_PAGE_SIZE(body_size()) + PAGE_SIZE,
+    // 	       PROT_READ | PROT_WRITE | PROT_EXEC);
+    // }
+    // else {
+    //   mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(address()),
+    // 	       ROUND_UP_TO_PAGE_SIZE(body_size()) + PAGE_SIZE,
+    // 	       PROT_READ | PROT_WRITE | PROT_EXEC);
+    //   /*
+    //   mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(address()),
+    // 	       ROUND_UP_TO_PAGE_SIZE(body_size()),
+    // 	       PROT_READ | PROT_WRITE | PROT_EXEC);
+    // 	*/
+    // }
     promise.emplace(RelocateFromDesc(writable_allocation, heap, desc,
                                      code->constant_pool(), no_gc));
 
@@ -228,11 +228,8 @@ void InstructionStream::set_code(Tagged<Code> value, ReleaseStoreTag tag) {
   LOG_E;
   DCHECK(!ObjectInYoungGeneration(value));
   DCHECK(IsTrustedSpaceObject(value));
-  WriteProtectedPointerField(kCodeOffset, value, tag);
-
-  //verse_enter(0);
-  //verse_write((__u64) this->instruction_start() + kCodeOffset, &value, sizeof(this->Size()));
-  //verse_exit(1);
+  verse_write((__u64) (this->address())+kCodeOffset, &value, sizeof(value));
+  //WriteProtectedPointerField(kCodeOffset, value, tag);
 
   CONDITIONAL_PROTECTED_POINTER_WRITE_BARRIER(*this, kCodeOffset, value,
                                               UPDATE_WRITE_BARRIER);

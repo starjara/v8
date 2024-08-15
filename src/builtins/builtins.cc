@@ -135,6 +135,7 @@ FullObjectSlot Builtins::builtin_tier0_slot(Builtin builtin) {
 }
 
 void Builtins::set_code(Builtin builtin, Tagged<Code> code) {
+  printf("Builtins::set_code\n");
   DCHECK_EQ(builtin, code->builtin_id());
   DCHECK(Internals::HasHeapObjectTag(code.ptr()));
   // The given builtin may be uninitialized thus we cannot check its type here.

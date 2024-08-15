@@ -189,8 +189,10 @@ Handle<HeapObject> RelocInfo::target_object_handle(Assembler* origin) {
 
 void WritableRelocInfo::set_target_object(Tagged<HeapObject> target,
                                           ICacheFlushMode icache_flush_mode) {
+  //printf("set_target_object\n");
   DCHECK(IsCodeTarget(rmode_) || IsEmbeddedObjectMode(rmode_));
   if (IsCompressedEmbeddedObject(rmode_)) {
+    //printf("\tcompressed\n");
     DCHECK(COMPRESS_POINTERS_BOOL);
     // We must not compress pointers to objects outside of the main pointer
     // compression cage as we wouldn't be able to decompress them with the
@@ -202,6 +204,7 @@ void WritableRelocInfo::set_target_object(Tagged<HeapObject> target,
         V8HeapCompressionScheme::CompressObject(target.ptr()),
         icache_flush_mode);
   } else {
+    //printf("\tnot compressed\n");
     DCHECK(IsFullEmbeddedObject(rmode_));
     Assembler::set_target_address_at(pc_, constant_pool_, target.ptr(),
                                      icache_flush_mode);

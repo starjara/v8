@@ -180,6 +180,7 @@ Tagged<Object> JSRegExp::code(IsolateForSandbox isolate, bool is_latin1) const {
 }
 
 void JSRegExp::set_code(bool is_latin1, Handle<Code> code) {
+  printf("set_code JSRegEXP\n");
   SetDataAt(code_index(is_latin1), code->wrapper());
 }
 

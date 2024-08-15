@@ -1470,13 +1470,21 @@ void Assembler::CheckTrampolinePool() {
 void Assembler::set_target_address_at(Address pc, Address constant_pool,
                                       Address target,
                                       ICacheFlushMode icache_flush_mode) {
+  /*
+  printf("set_target_address_at\n");
+  printf("pc: 0x%llx\n", pc);
+  printf("constant_pool: 0x%llx\n", constant_pool);
+  printf("target: 0x%llx\n", target);
+  */
   Instr* instr = reinterpret_cast<Instr*>(pc);
   if (IsAuipc(*instr)) {
+    //printf("\tIsAuipc\n");
 #if V8_TARGET_ARCH_RISCV64
     if (IsLd(*reinterpret_cast<Instr*>(pc + 4))) {
 #elif V8_TARGET_ARCH_RISCV32
     if (IsLw(*reinterpret_cast<Instr*>(pc + 4))) {
 #endif
+      //printf("\treinterpret\n");
       int32_t Hi20 = AuipcOffset(*instr);
       int32_t Lo12 = LoadOffset(*reinterpret_cast<Instr*>(pc + 4));
       Memory<Address>(pc + Hi20 + Lo12) = target;
@@ -1484,6 +1492,7 @@ void Assembler::set_target_address_at(Address pc, Address constant_pool,
         FlushInstructionCache(pc + Hi20 + Lo12, 2 * kInstrSize);
       }
     } else {
+      //printf("\treinterpret else\n");
       DCHECK(IsJalr(*reinterpret_cast<Instr*>(pc + 4)));
       intptr_t imm = (intptr_t)target - (intptr_t)pc;
       Instr instr = instr_at(pc);
@@ -1495,8 +1504,11 @@ void Assembler::set_target_address_at(Address pc, Address constant_pool,
       }
     }
   } else {
+      //printf("\tIsAuipc else\n");
     set_target_address_at(pc, target, icache_flush_mode);
+    //printf("\tIsAuipc after\n");
   }
+    //printf("End of set_target_address_at\n");
 }
 
 Address Assembler::target_address_at(Address pc, Address constant_pool) {
@@ -1568,7 +1580,24 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
                                     ICacheFlushMode icache_flush_mode) {
   DEBUG_PRINTF("set_target_value_at: pc: %" PRIxPTR "\ttarget: %" PRIx64 "\n",
                pc, target);
-  uint32_t* p = reinterpret_cast<uint32_t*>(pc);
+  //printf("set_target_value_at: pc: %llx\ttarget: %llx\n", pc, target);
+  //uint32_t* p = reinterpret_cast<uint32_t*>(pc);
+  uint32_t* p2 = reinterpret_cast<uint32_t*>(pc);
+  uint32_t p = 0;
+  /*
+  if(*p2 != 0) {
+    printf("From host 0x%lx\n", *p2);
+  }
+  */
+
+  uint32_t imm = *p2 >> 12;
+  //if(*p2 != 0x15c637 && *p2 != 0x1ff537 && *p2 != 0x1ff637 && *p2 != 0xa2637 && *p2 != 0x68537 && *p2 != 0x1fa537 && *p2 != 0x2c637) {
+  //if(*p2 == 0x155637 || *p2 == 0x155337 || *p2 == 0x155537 || *p2 == 0x157337 || *p2 == 0x1559b7 || *p2 == 0x1555b7) {
+  if (0x155 <= imm && imm <= 0x157) {
+    verse_read(pc, &p, sizeof(uint32_t));
+    //printf("From Guest 0x%lx\n", p);
+  }
+  
   DCHECK_EQ((target & 0xffff000000000000ll), 0);
 #ifdef DEBUG
   // Check we have the result from a li macro-instruction.
@@ -1586,18 +1615,76 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
   int64_t high_31 = (target >> 17) & 0x7fffffff;  // 31 bits
   int64_t high_20 = ((high_31 + 0x800) >> 12);    // 19 bits
   int64_t low_12 = high_31 & 0xfff;               // 12 bits
-  *p = *p & 0xfff;
-  *p = *p | ((int32_t)high_20 << 12);
-  *(p + 1) = *(p + 1) & 0xfffff;
-  *(p + 1) = *(p + 1) | ((int32_t)low_12 << 20);
-  *(p + 2) = *(p + 2) & 0xfffff;
-  *(p + 2) = *(p + 2) | (11 << 20);
-  *(p + 3) = *(p + 3) & 0xfffff;
-  *(p + 3) = *(p + 3) | ((int32_t)b11 << 20);
-  *(p + 4) = *(p + 4) & 0xfffff;
-  *(p + 4) = *(p + 4) | (6 << 20);
-  *(p + 5) = *(p + 5) & 0xfffff;
-  *(p + 5) = *(p + 5) | ((int32_t)a6 << 20);
+
+  if(p != 0) {
+    //*p = *p & 0xfff;
+    p = p & 0xfff;
+    verse_write(pc, &p, sizeof(p));
+    
+    //*p = *p | ((int32_t)high_20 << 12);
+    p = p | ((int32_t)high_20 << 12);
+    verse_write(pc, &p, sizeof(p));
+    
+    //*(p + 1) = *(p + 1) & 0xfffff;
+    verse_read(pc + 4, &p, sizeof(p));
+    p = p & 0xfffff;
+    verse_write(pc + 4, &p, sizeof(p));
+    
+    //*(p + 1) = *(p + 1) | ((int32_t)low_12 << 20);
+    p = p | ((int32_t)low_12 << 20);
+    verse_write(pc + 4, &p, sizeof(p));
+
+    //*(p + 2) = *(p + 2) & 0xfffff;
+    verse_read(pc + 8, &p, sizeof(p));
+    p = p & 0xfffff;
+    verse_write(pc + 8, &p, sizeof(p));
+  
+    //*(p + 2) = *(p + 2) | (11 << 20);
+    p = p | (11 << 20);
+    verse_write(pc + 8, &p, sizeof(p));
+
+    //*(p + 3) = *(p + 3) & 0xfffff;
+    verse_read(pc + 12, &p, sizeof(p));
+    p = p & 0xfffff;
+    verse_write(pc + 12, &p, sizeof(p));
+
+    //*(p + 3) = *(p + 3) | ((int32_t)b11 << 20);
+    p = p | ((int32_t)b11 << 20);
+    verse_write(pc + 12, &p, sizeof(p));
+
+    //*(p + 4) = *(p + 4) & 0xfffff;
+    verse_read(pc + 16, &p, sizeof(p));
+    p = p & 0xfffff;
+    verse_write(pc + 16, &p, sizeof(p));
+    
+    //*(p + 4) = *(p + 4) | (6 << 20);
+    p = p | (6 << 20);
+    verse_write(pc + 16, &p, sizeof(p));
+
+    //*(p + 5) = *(p + 5) & 0xfffff;
+    verse_read(pc + 20, &p, sizeof(p));
+    p = p & 0xfffff;
+    verse_write(pc + 20, &p, sizeof(p));
+
+    //*(p + 5) = *(p + 5) | ((int32_t)a6 << 20);
+    p = p | ((int32_t)a6 << 20);
+    verse_write(pc + 20, &p, sizeof(p));
+  }
+  else {
+    *p2 = *p2 & 0xfff;
+    *p2 = *p2 | ((int32_t)high_20 << 12);
+    *(p2 + 1) = *(p2 + 1) & 0xfffff;
+    *(p2 + 1) = *(p2 + 1) | ((int32_t)low_12 << 20);
+    *(p2 + 2) = *(p2 + 2) & 0xfffff;
+    *(p2 + 2) = *(p2 + 2) | (11 << 20);
+    *(p2 + 3) = *(p2 + 3) & 0xfffff;
+    *(p2 + 3) = *(p2 + 3) | ((int32_t)b11 << 20);
+    *(p2 + 4) = *(p2 + 4) & 0xfffff;
+    *(p2 + 4) = *(p2 + 4) | (6 << 20);
+    *(p2 + 5) = *(p2 + 5) & 0xfffff;
+    *(p2 + 5) = *(p2 + 5) | ((int32_t)a6 << 20);
+  }
+  
   if (icache_flush_mode != SKIP_ICACHE_FLUSH) {
     FlushInstructionCache(pc, 8 * kInstrSize);
   }
@@ -1630,6 +1717,7 @@ Address Assembler::target_address_at(Address pc) {
 void Assembler::set_target_value_at(Address pc, uint32_t target,
                                     ICacheFlushMode icache_flush_mode) {
   DEBUG_PRINTF("set_target_value_at: pc: %x\ttarget: %x\n", pc, target);
+  printf("set_target_value_at32: pc: %x\ttarget: %x\n", pc, target);
   uint32_t* p = reinterpret_cast<uint32_t*>(pc);
 #ifdef DEBUG
   // Check we have the result from a li macro-instruction.
