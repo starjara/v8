@@ -426,12 +426,6 @@ void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
 
 #if V8_TARGET_ARCH_RISCV64
     memset(reinterpret_cast<void *>(address), 0, size);
-
-  /*
-    verse_enter(0);
-    verse_mmap(address , address , size, PROT_READ | PROT_WRITE);
-    verse_exit(1);
-  */
 #endif
 }
 
