@@ -152,13 +152,13 @@ void WritableJitAllocation::WriteHeaderSlot(T value) {
   static_assert(!is_taggable_v<T>);
 
   if constexpr (offset == HeapObject::kMapOffset) {
-     verse_write(address_, &value, sizeof(value));
+    verse_write((void *)address_, &value, sizeof(value));
     /*
     TaggedField<T, offset>::Relaxed_Store_Map_Word(
         HeapObject::FromAddress(address_), value);
     */
   } else {
-    verse_write(address_ + offset, &value, sizeof(value));
+    verse_write((void *)(address_ + offset), &value, sizeof(value));
     /*
     WriteMaybeUnalignedValue<T>(address_ + offset, value);
     */
@@ -174,7 +174,7 @@ void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, ReleaseStoreTag) {
   // printf("\tSecond\n");
   static_assert(offset != HeapObject::kMapOffset);
 
-  verse_write(address_ + offset, &value, sizeof(value));
+  verse_write((void *)(address_ + offset), &value, sizeof(value));
   /*
   TaggedField<T, offset>::Release_Store(HeapObject::FromAddress(address_),
                                         value);
@@ -187,13 +187,13 @@ void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, RelaxedStoreTag) {
   LOG_E;
   // printf("\tThird\n");
   if constexpr (offset == HeapObject::kMapOffset) {
-    verse_write(address_ + offset, &value, sizeof(value));
+    verse_write((void *)(address_ + offset), &value, sizeof(value));
     /*
     TaggedField<T, offset>::Relaxed_Store_Map_Word(
         HeapObject::FromAddress(address_), value);
     */
   } else {
-    verse_write(address_ + offset, &value, sizeof(value));
+    verse_write((void *)(address_ + offset), &value, sizeof(value));
     /*
     TaggedField<T, offset>::Relaxed_Store(HeapObject::FromAddress(address_),
                                           value);
@@ -219,7 +219,7 @@ void WritableJitAllocation::WriteProtectedPointerHeaderSlot(Tagged<T> value,
   printf("0x%lx\n", t);
   */
 
-  verse_write((address_ + offset), &value, sizeof(value));
+  verse_write((void *)(address_ + offset), &value, sizeof(value));
 
   /*
   t = TaggedField<T, offset, TrustedSpaceCompressionScheme>::Relaxed_Load(HeapObject::FromAddress(address_));
@@ -266,7 +266,7 @@ void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
   
   // verse_enter(0);
   // char tmp[num_bytes];
-  verse_write((__u64)(address_ + dst_offset), (void *)src, num_bytes);
+  verse_write((void *)(address_ + dst_offset), (void *)src, num_bytes);
   // CopyBytes(reinterpret_cast<uint8_t*>(tmp), reinterpret_cast<uint8_t*>(address_ + dst_offset), num_bytes);
   // printf("Written code : 0x%lx, 0x%s\n", address_ + dst_offset, tmp);
   // verse_exit(1);
@@ -280,7 +280,7 @@ void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
   LOG_E;
   // verse_enter(0);
-  verse_write((__u64)(address_ + dst_offset), (void *) src, num_bytes);
+  verse_write((void *)(address_ + dst_offset), (void *) src, num_bytes);
   // verse_exit(1);
   //CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
   LOG_O;
@@ -307,7 +307,7 @@ void WritableJitAllocation::ClearBytes(size_t offset, size_t len) {
       if(address_ + offset + i >= address_ + size()) {
 	break;
       }
-      verse_write((__u64)(address_ + offset + i), &tmp, sizeof(tmp));
+      verse_write((void *)(address_ + offset + i), &tmp, sizeof(tmp));
     }
     // verse_read((__u64)(address_ + offset), &ret, sizeof(ret));
     // printf("\tRet : 0x%lx\n", ret);

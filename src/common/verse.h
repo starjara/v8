@@ -52,7 +52,8 @@ __u64 verse_mmap(__u64 base, __u64 userspace_addr, size_t size, int prot);
 void verse_munmap(__u64 base, size_t size);
 void *verse_mprotect(__u64 base, __u64 user_start, size_t size, int prot);
 
-int verse_write(__u64 base, void *src, size_t size);
-int verse_read(__u64 base, void *dst, size_t size);
+int verse_write(void *base, void *src, size_t size);
+//int verse_read(__u64 base, void *dst, size_t size);
+unsigned long long verse_read(void *base, size_t size);
 
 #endif

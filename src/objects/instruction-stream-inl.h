@@ -228,7 +228,7 @@ void InstructionStream::set_code(Tagged<Code> value, ReleaseStoreTag tag) {
   LOG_E;
   DCHECK(!ObjectInYoungGeneration(value));
   DCHECK(IsTrustedSpaceObject(value));
-  verse_write((__u64) (this->address())+kCodeOffset, &value, sizeof(value));
+  verse_write((void *)((this->address())+kCodeOffset), &value, sizeof(value));
   //WriteProtectedPointerField(kCodeOffset, value, tag);
 
   CONDITIONAL_PROTECTED_POINTER_WRITE_BARRIER(*this, kCodeOffset, value,

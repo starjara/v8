@@ -1594,7 +1594,8 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
   //if(*p2 != 0x15c637 && *p2 != 0x1ff537 && *p2 != 0x1ff637 && *p2 != 0xa2637 && *p2 != 0x68537 && *p2 != 0x1fa537 && *p2 != 0x2c637) {
   //if(*p2 == 0x155637 || *p2 == 0x155337 || *p2 == 0x155537 || *p2 == 0x157337 || *p2 == 0x1559b7 || *p2 == 0x1555b7) {
   if (0x155 <= imm && imm <= 0x157) {
-    verse_read(pc, &p, sizeof(uint32_t));
+    //verse_read(pc, &p, sizeof(uint32_t));
+    p = verse_read((void *)pc, sizeof(uint32_t));
     //printf("From Guest 0x%lx\n", p);
   }
   
@@ -1619,56 +1620,61 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
   if(p != 0) {
     //*p = *p & 0xfff;
     p = p & 0xfff;
-    verse_write(pc, &p, sizeof(p));
+    verse_write((void *)pc, &p, sizeof(p));
     
     //*p = *p | ((int32_t)high_20 << 12);
     p = p | ((int32_t)high_20 << 12);
-    verse_write(pc, &p, sizeof(p));
+    verse_write((void *)pc, &p, sizeof(p));
     
     //*(p + 1) = *(p + 1) & 0xfffff;
-    verse_read(pc + 4, &p, sizeof(p));
+    //verse_read(pc + 4, &p, sizeof(p));
+    p = verse_read((void *)(pc + 4), sizeof(p));
     p = p & 0xfffff;
-    verse_write(pc + 4, &p, sizeof(p));
+    verse_write((void *)(pc + 4), &p, sizeof(p));
     
     //*(p + 1) = *(p + 1) | ((int32_t)low_12 << 20);
     p = p | ((int32_t)low_12 << 20);
-    verse_write(pc + 4, &p, sizeof(p));
+    verse_write((void *)(pc + 4), &p, sizeof(p));
 
     //*(p + 2) = *(p + 2) & 0xfffff;
-    verse_read(pc + 8, &p, sizeof(p));
+    //verse_read(pc + 8, &p, sizeof(p));
+    p = verse_read((void *)(pc + 8), sizeof(p));
     p = p & 0xfffff;
-    verse_write(pc + 8, &p, sizeof(p));
+    verse_write((void *)(pc + 8), &p, sizeof(p));
   
     //*(p + 2) = *(p + 2) | (11 << 20);
     p = p | (11 << 20);
-    verse_write(pc + 8, &p, sizeof(p));
+    verse_write((void *)(pc + 8), &p, sizeof(p));
 
     //*(p + 3) = *(p + 3) & 0xfffff;
-    verse_read(pc + 12, &p, sizeof(p));
+    //verse_read(pc + 12, &p, sizeof(p));
+    p = verse_read((void *)(pc + 12), sizeof(p));
     p = p & 0xfffff;
-    verse_write(pc + 12, &p, sizeof(p));
+    verse_write((void *)(pc + 12), &p, sizeof(p));
 
     //*(p + 3) = *(p + 3) | ((int32_t)b11 << 20);
     p = p | ((int32_t)b11 << 20);
-    verse_write(pc + 12, &p, sizeof(p));
+    verse_write((void *)(pc + 12), &p, sizeof(p));
 
     //*(p + 4) = *(p + 4) & 0xfffff;
-    verse_read(pc + 16, &p, sizeof(p));
+    //verse_read(pc + 16, &p, sizeof(p));
+    p = verse_read((void *)(pc + 16), sizeof(p));
     p = p & 0xfffff;
-    verse_write(pc + 16, &p, sizeof(p));
+    verse_write((void *)(pc + 16), &p, sizeof(p));
     
     //*(p + 4) = *(p + 4) | (6 << 20);
     p = p | (6 << 20);
-    verse_write(pc + 16, &p, sizeof(p));
+    verse_write((void *)(pc + 16), &p, sizeof(p));
 
     //*(p + 5) = *(p + 5) & 0xfffff;
-    verse_read(pc + 20, &p, sizeof(p));
+    //verse_read(pc + 20, &p, sizeof(p));
+    p = verse_read((void *)(pc + 20), sizeof(p));
     p = p & 0xfffff;
-    verse_write(pc + 20, &p, sizeof(p));
+    verse_write((void *)(pc + 20), &p, sizeof(p));
 
     //*(p + 5) = *(p + 5) | ((int32_t)a6 << 20);
     p = p | ((int32_t)a6 << 20);
-    verse_write(pc + 20, &p, sizeof(p));
+    verse_write((void *)(pc + 20), &p, sizeof(p));
   }
   else {
     *p2 = *p2 & 0xfff;
