@@ -121,6 +121,13 @@
 #define CHECK(condition) assert(condition)
 #endif
 
+/* JARA: verse head */
+#if V8_TARGET_ARCH_RISCV64
+extern "C" {
+  #include "src/common/verse.h"
+}
+#endif
+
 namespace v8 {
 
 namespace {
@@ -6220,6 +6227,10 @@ int Shell::Main(int argc, char* argv[]) {
   }
   utf8_filenames.clear();
 #endif
+
+  /* JARA: End of main, destroy domain */
+  verse_destroy(0);
+  /* JARA End */
 
   return result;
 }
