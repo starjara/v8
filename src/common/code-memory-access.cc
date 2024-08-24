@@ -92,6 +92,8 @@ void ThreadIsolation::Initialize(
 
 #ifdef V8_TARGET_ARCH_RISCV64
   verse_create(0);
+  verse_enter(0);
+  verse_exit();
 #endif
   
 #ifdef THREAD_SANITIZER

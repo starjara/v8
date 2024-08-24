@@ -46,7 +46,7 @@ int verse_create(int vid);
 int verse_destroy(int vid);
 
 int verse_enter(int vid);
-int verse_exit(int isFast);
+int verse_exit();
 
 __u64 verse_mmap(__u64 base, __u64 userspace_addr, size_t size, int prot);
 void verse_munmap(__u64 base, size_t size);
