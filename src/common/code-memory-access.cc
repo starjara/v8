@@ -83,7 +83,7 @@ void ThreadIsolation::Delete(T* ptr) {
 
 // static
 void ThreadIsolation::Initialize(
-    ThreadIsolatedAllocator* thread_isolated_allocator) {
+				 ThreadIsolatedAllocator* thread_isolated_allocator, int dom_count) {
   //LOG_E;
 #if DEBUG
   trusted_data_.initialized = true;
@@ -91,8 +91,9 @@ void ThreadIsolation::Initialize(
   bool enable = thread_isolated_allocator != nullptr && !v8_flags.jitless;
 
 #ifdef V8_TARGET_ARCH_RISCV64
-  verse_create(0);
-  verse_enter(0);
+  dom_index = dom_count;
+  verse_create(dom_index);
+  verse_enter(dom_index);
   verse_exit();
 #endif
   

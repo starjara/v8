@@ -444,7 +444,8 @@ void RwxMemoryWriteScope::SetExecutable() {
   void RwxMemoryWriteScope::SetWritable()
   {
     LOG_E;
-    verse_enter(-1);
+    int index = ThreadIsolation::dom_index;
+    verse_enter(index);
     LOG_O;
   }
 

@@ -292,8 +292,9 @@ void V8::Initialize() {
 
   // Fetch the ThreadIsolatedAllocator once since we need to keep the pointer in
   // protected memory.
+  static int dom_count = 0;
   ThreadIsolation::Initialize(
-      GetCurrentPlatform()->GetThreadIsolatedAllocator());
+			      GetCurrentPlatform()->GetThreadIsolatedAllocator(), dom_count++);
 
 #if V8_ENABLE_WEBASSEMBLY
   wasm::WasmEngine::InitializeOncePerProcess();

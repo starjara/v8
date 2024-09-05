@@ -147,8 +147,14 @@ class WritableJumpTablePair;
 class V8_EXPORT ThreadIsolation {
  public:
   static bool Enabled();
-  static void Initialize(ThreadIsolatedAllocator* allocator);
+  static void Initialize(ThreadIsolatedAllocator* allocator, int dom_count);
 
+    /* JARA: Domain Index */
+  #ifdef V8_TARGET_ARCH_RISCV64
+  static int dom_index;
+  //static int dom_index() { return dom_index; }
+  #endif
+    /* JARA End */
   V8_INLINE ~ThreadIsolation();
   
   enum class JitAllocationType {
