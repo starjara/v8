@@ -161,7 +161,21 @@ V8_INLINE void WritableJitAllocation::WriteHeaderSlot(Address address, T value,
 
 void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
+  unsigned long long begin, end;
+
+  asm volatile ("\n"
+		"rdtime %[begin]\n"
+		: [begin] "=r" (begin) :: );
+  
   CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
+
+  asm volatile ("\n"
+		"rdtime %[end]\n"
+		: [end] "=r" (end) :: );
+  
+ 
+  printf("elapsed: %llu\n", end - begin);
+
 }
 
 void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
