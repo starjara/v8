@@ -444,7 +444,7 @@ void RwxMemoryWriteScope::SetExecutable() {
   void RwxMemoryWriteScope::SetWritable()
   {
     LOG_E;
-    verse_enter(-1);
+    verse_enter(0);
     LOG_O;
   }
 
