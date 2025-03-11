@@ -9,7 +9,7 @@
 
 #ifdef V8_TARGET_ARCH_RISCV64
 extern "C" {
-  #include "src/common/verse.h"
+  #include "src/common/domv.h"
   #include <sys/mman.h>
 }
 #endif
@@ -91,9 +91,9 @@ void ThreadIsolation::Initialize(
   bool enable = thread_isolated_allocator != nullptr && !v8_flags.jitless;
 
 #ifdef V8_TARGET_ARCH_RISCV64
-  verse_create(0);
-  verse_enter(0);
-  verse_exit();
+  domv_create(0);
+  domv_enter(0);
+  domv_exit();
 #endif
   
 #ifdef THREAD_SANITIZER

@@ -121,10 +121,10 @@
 #define CHECK(condition) assert(condition)
 #endif
 
-/* JARA: verse head */
+/* JARA: domv head */
 #if V8_TARGET_ARCH_RISCV64
 extern "C" {
-  #include "src/common/verse.h"
+  #include "src/common/domv.h"
 }
 #endif
 
@@ -6229,7 +6229,7 @@ int Shell::Main(int argc, char* argv[]) {
 #endif
 
   /* JARA: End of main, destroy domain */
-  verse_destroy(0);
+  domv_destroy(0);
   /* JARA End */
 
   return result;

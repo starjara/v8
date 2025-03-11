@@ -1625,11 +1625,11 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
     // printf("Write in guest pages\n");
     //*p = *p & 0xfff;
     p = *(p2) & 0xfff;
-    verse_write((void *)pc, &p, sizeof(p));
+    domv_write((void *)pc, &p, sizeof(p), 0);
     
     //*p = *p | ((int32_t)high_20 << 12);
     p = *(p2) | ((int32_t)high_20 << 12);
-    verse_write((void *)pc, &p, sizeof(p));
+    domv_write((void *)pc, &p, sizeof(p), 0);
     
     //*(p + 1) = *(p + 1) & 0xfffff;
     //verse_read(pc + 4, &p, sizeof(p));
@@ -1638,11 +1638,11 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
     // p = p & 0xfffff;
     /* JARA End */
     p = *(p2 + 1) & 0xfffff;
-    verse_write((void *)(pc + 4), &p, sizeof(p));
+    domv_write((void *)(pc + 4), &p, sizeof(p), 0);
     
     //*(p + 1) = *(p + 1) | ((int32_t)low_12 << 20);
     p = *(p2 + 1) | ((int32_t)low_12 << 20);
-    verse_write((void *)(pc + 4), &p, sizeof(p));
+    domv_write((void *)(pc + 4), &p, sizeof(p), 0);
 
     //*(p + 2) = *(p + 2) & 0xfffff;
     //verse_read(pc + 8, &p, sizeof(p));
@@ -1650,43 +1650,43 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
     // p = verse_read((void *)(pc + 8), sizeof(p));
     // p = p & 0xfffff;
     p = *(p2 + 2) & 0xfffff;
-    verse_write((void *)(pc + 8), &p, sizeof(p));
+    domv_write((void *)(pc + 8), &p, sizeof(p), 0);
   
     //*(p + 2) = *(p + 2) | (11 << 20);
     p = *(p2 + 2) | (11 << 20);
-    verse_write((void *)(pc + 8), &p, sizeof(p));
+    domv_write((void *)(pc + 8), &p, sizeof(p), 0);
 
     //*(p + 3) = *(p + 3) & 0xfffff;
     // p = verse_read((void *)(pc + 12), sizeof(p));
     // p = p & 0xfffff;
     
     p = *(p2 + 3) & 0xfffff;
-    verse_write((void *)(pc + 12), &p, sizeof(p));
+    domv_write((void *)(pc + 12), &p, sizeof(p), 0);
 
     //*(p + 3) = *(p + 3) | ((int32_t)b11 << 20);
     p = *(p2 + 3) | ((int32_t)b11 << 20);
-    verse_write((void *)(pc + 12), &p, sizeof(p));
+    domv_write((void *)(pc + 12), &p, sizeof(p), 0);
 
     // *(p + 4) = *(p + 4) & 0xfffff;
     // p = verse_read((void *)(pc + 16), sizeof(p));
     // p = p & 0xfffff;
     p = *(p2 + 4) & 0xfffff;
-    verse_write((void *)(pc + 16), &p, sizeof(p));
+    domv_write((void *)(pc + 16), &p, sizeof(p), 0);
     
     // *(p + 4) = *(p + 4) | (6 << 20);
     p = *(p2 + 4) | (6 << 20);
-    verse_write((void *)(pc + 16), &p, sizeof(p));
+    domv_write((void *)(pc + 16), &p, sizeof(p), 0);
 
     // *(p + 5) = *(p + 5) & 0xfffff;
     // p = verse_read((void *)(pc + 20), sizeof(p));
     // p = p & 0xfffff;
 
     p = *(p2 + 5) & 0xfffff;
-    verse_write((void *)(pc + 20), &p, sizeof(p));
+    domv_write((void *)(pc + 20), &p, sizeof(p), 0);
 
     //*(p + 5) = *(p + 5) | ((int32_t)a6 << 20);
     p = *(p2 + 5) | ((int32_t)a6 << 20);
-    verse_write((void *)(pc + 20), &p, sizeof(p));
+    domv_write((void *)(pc + 20), &p, sizeof(p), 0);
   }
   else {
     // printf("Write in host pages\n");

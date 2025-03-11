@@ -11,10 +11,6 @@
 #include "src/objects/allocation-site-inl.h"
 #include "src/objects/objects-inl.h"
 
-extern "C" {
-  #include "src/common/verse.h"
-}
-
 namespace v8 {
 namespace internal {
 

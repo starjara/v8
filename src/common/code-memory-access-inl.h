@@ -22,22 +22,23 @@
 #endif
 #if V8_TARGET_ARCH_RISCV64
 extern "C" {
-  #include "src/common/verse.h"
+  #include "src/common/domv.h"
+  #include <sys/mman.h>
 }
 #endif
 
-// #define LOG_E printf("[common/code-memory-access-inl.h] Enter: %s\n", __FUNCTION__)
-// #define LOG_O printf("[common/code-memory-access-inl.h] Exit: %s\n", __FUNCTION__)
+#define LOG_E printf("[common/code-memory-access-inl.h] Enter: %s\n", __FUNCTION__)
+#define LOG_O printf("[common/code-memory-access-inl.h] Exit: %s\n", __FUNCTION__)
 
-#define LOG_E
-#define LOG_O
+//#define LOG_E
+//#define LOG_O
 
 namespace v8 {
 namespace internal {
 
 ThreadIsolation::~ThreadIsolation() {
   LOG_E;
-  verse_destroy(0);
+  domv_destroy(0);
   LOG_O;
 }
 
@@ -64,12 +65,12 @@ WritableJitAllocation::~WritableJitAllocation() {
     return ;
   }
   if(address_ + size() > ROUND_DOWN_TO_PAGE_SIZE(address_) + ROUND_UP_TO_PAGE_SIZE(this->size())) {
-    mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE, PROT_READ |PROT_WRITE| PROT_EXEC);
-    verse_munmap(ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE);
+    //mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE, PROT_READ |PROT_WRITE| PROT_EXEC);
+    domv_munmap((void *)ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()) + PAGE_SIZE);
   }
   else {
-    mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()), PROT_READ |PROT_WRITE| PROT_EXEC);
-    verse_munmap(ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()));
+    //mprotect((void *) ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()), PROT_READ |PROT_WRITE| PROT_EXEC);
+    domv_munmap((void *)ROUND_DOWN_TO_PAGE_SIZE(address_), ROUND_UP_TO_PAGE_SIZE(this->size()));
   }
   LOG_O;
 } //= default;
@@ -95,12 +96,12 @@ WritableJitAllocation::WritableJitAllocation(
   */
 
   if(addr + size > ROUND_DOWN_TO_PAGE_SIZE(addr) + ROUND_UP_TO_PAGE_SIZE(size)) {
-    mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size) + PAGE_SIZE, PROT_READ|PROT_EXEC);
-    verse_mmap(ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size) + PAGE_SIZE, PROT_READ|PROT_WRITE);
+    //mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size) + PAGE_SIZE, PROT_READ|PROT_EXEC);
+    domv_mmap(ROUND_DOWN_TO_PAGE_SIZE(addr), (void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size) + PAGE_SIZE, PROT_READ|PROT_WRITE);
   }
   else {
-    mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size), PROT_READ|PROT_EXEC);
-    verse_mmap(ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size), PROT_READ|PROT_WRITE);
+    //mprotect((void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size), PROT_READ|PROT_EXEC);
+    domv_mmap(ROUND_DOWN_TO_PAGE_SIZE(addr), (void *)ROUND_DOWN_TO_PAGE_SIZE(addr), ROUND_UP_TO_PAGE_SIZE(size), PROT_READ|PROT_WRITE);
   }
   LOG_O;
   // verse_exit(0);
@@ -152,13 +153,13 @@ void WritableJitAllocation::WriteHeaderSlot(T value) {
   static_assert(!is_taggable_v<T>);
 
   if constexpr (offset == HeapObject::kMapOffset) {
-    verse_write((void *)address_, &value, sizeof(value));
+    domv_write((void *)address_, &value, sizeof(value), 0);
     /*
     TaggedField<T, offset>::Relaxed_Store_Map_Word(
         HeapObject::FromAddress(address_), value);
     */
   } else {
-    verse_write((void *)(address_ + offset), &value, sizeof(value));
+    domv_write((void *)(address_ + offset), &value, sizeof(value), 0);
     /*
     WriteMaybeUnalignedValue<T>(address_ + offset, value);
     */
@@ -174,7 +175,7 @@ void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, ReleaseStoreTag) {
   // printf("\tSecond\n");
   static_assert(offset != HeapObject::kMapOffset);
 
-  verse_write((void *)(address_ + offset), &value, sizeof(value));
+  domv_write((void *)(address_ + offset), &value, sizeof(value), 0);
   /*
   TaggedField<T, offset>::Release_Store(HeapObject::FromAddress(address_),
                                         value);
@@ -187,13 +188,13 @@ void WritableJitAllocation::WriteHeaderSlot(Tagged<T> value, RelaxedStoreTag) {
   LOG_E;
   // printf("\tThird\n");
   if constexpr (offset == HeapObject::kMapOffset) {
-    verse_write((void *)(address_ + offset), &value, sizeof(value));
+    domv_write((void *)(address_ + offset), &value, sizeof(value), 0);
     /*
     TaggedField<T, offset>::Relaxed_Store_Map_Word(
         HeapObject::FromAddress(address_), value);
     */
   } else {
-    verse_write((void *)(address_ + offset), &value, sizeof(value));
+    domv_write((void *)(address_ + offset), &value, sizeof(value), 0);
     /*
     TaggedField<T, offset>::Relaxed_Store(HeapObject::FromAddress(address_),
                                           value);
@@ -219,7 +220,7 @@ void WritableJitAllocation::WriteProtectedPointerHeaderSlot(Tagged<T> value,
   printf("0x%lx\n", t);
   */
 
-  verse_write((void *)(address_ + offset), &value, sizeof(value));
+  domv_write((void *)(address_ + offset), &value, sizeof(value), 0);
 
   /*
   t = TaggedField<T, offset, TrustedSpaceCompressionScheme>::Relaxed_Load(HeapObject::FromAddress(address_));
@@ -264,11 +265,11 @@ void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
   LOG_E;
   
-  // verse_enter(0);
+  printf("Write code to 0x%lx from 0x%lx with size %lu\n", address_ + dst_offset, src, num_bytes);
+  // domv_enter(0);
   // char tmp[num_bytes];
-  verse_write((void *)(address_ + dst_offset), (void *)src, num_bytes);
+  domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 0);
   // CopyBytes(reinterpret_cast<uint8_t*>(tmp), reinterpret_cast<uint8_t*>(address_ + dst_offset), num_bytes);
-  // printf("Written code : 0x%lx, 0x%s\n", address_ + dst_offset, tmp);
   // verse_exit(1);
 
   LOG_O;
@@ -279,8 +280,13 @@ void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
 void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
   LOG_E;
+  printf("Write data to 0x%lx from 0x%lx with size %lu\n", address_ + dst_offset, src, num_bytes);
+
+  if(num_bytes == 0) {
+    return ;
+  }
   // verse_enter(0);
-  verse_write((void *)(address_ + dst_offset), (void *) src, num_bytes);
+  domv_write((void *)(address_ + dst_offset), (void *) src, num_bytes, 0);
   // verse_exit(1);
   //CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
   LOG_O;
@@ -307,7 +313,7 @@ void WritableJitAllocation::ClearBytes(size_t offset, size_t len) {
       if(address_ + offset + i >= address_ + size()) {
 	break;
       }
-      verse_write((void *)(address_ + offset + i), &tmp, sizeof(tmp));
+      domv_write((void *)(address_ + offset + i), &tmp, sizeof(tmp), 0);
     }
     // verse_read((__u64)(address_ + offset), &ret, sizeof(ret));
     // printf("\tRet : 0x%lx\n", ret);
@@ -444,7 +450,7 @@ void RwxMemoryWriteScope::SetExecutable() {
   void RwxMemoryWriteScope::SetWritable()
   {
     LOG_E;
-    verse_enter(0);
+    domv_enter(0);
     LOG_O;
   }
 
@@ -452,7 +458,7 @@ void RwxMemoryWriteScope::SetExecutable() {
   void RwxMemoryWriteScope::SetExecutable()
   {
     LOG_E;
-    verse_exit();
+    domv_exit();
     LOG_O;
   }
   

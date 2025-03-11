@@ -12,15 +12,16 @@
 #include "src/objects/objects-inl.h"  // For HeapObject::IsInstructionStream.
 
 extern "C" {
-  #include "src/common/verse.h"
+  #include "src/common/domv.h"
   #include <sys/mman.h>
 #undef MAP_TYPE
 }
 
-// #define LOG_E printf("[objects/instruction-stream-inl.h] Enter: %s\n", __FUNCTION__)
-// #define LOG_O printf("[objects/instruction-stream-inl.h] Exit: %s\n", __FUNCTION__)
-#define LOG_E
-#define LOG_O
+#define LOG_E printf("[objects/instruction-stream-inl.h] Enter: %s\n", __FUNCTION__)
+#define LOG_O printf("[objects/instruction-stream-inl.h] Exit: %s\n", __FUNCTION__)
+
+//#define LOG_E
+//#define LOG_O
 
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
@@ -228,7 +229,7 @@ void InstructionStream::set_code(Tagged<Code> value, ReleaseStoreTag tag) {
   LOG_E;
   DCHECK(!ObjectInYoungGeneration(value));
   DCHECK(IsTrustedSpaceObject(value));
-  verse_write((void *)((this->address())+kCodeOffset), &value, sizeof(value));
+  domv_write((void *)((this->address())+kCodeOffset), &value, sizeof(value), 0);
   //WriteProtectedPointerField(kCodeOffset, value, tag);
 
   CONDITIONAL_PROTECTED_POINTER_WRITE_BARRIER(*this, kCodeOffset, value,

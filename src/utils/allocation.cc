@@ -24,10 +24,6 @@
 #include <malloc.h>
 #endif
 
-extern "C" {
-  #include "src/common/verse.h"
-}
-
 namespace v8 {
 namespace internal {
 
@@ -180,17 +176,6 @@ void* AllocatePages(v8::PageAllocator* page_allocator, void* hint, size_t size,
     if (V8_LIKELY(result != nullptr)) break;
     OnCriticalMemoryPressure();
   }
-  /*
-  if(result != NULL && access != PageAllocator::kNoAccess) {
-    // printf("result : 0x%lx\n", (unsigned long) result);
-    // printf("hint : 0x%lx\n", (unsigned long) hint);
-    // printf("access : 0x%x\n", access);
-    // printf("size : 0x%lx\n", size);
-    //verse_enter(0);
-    //verse_mmap((unsigned long)result, (unsigned long) result, size, access);
-    //verse_exit(1);
-  }
-  */
   return result;
 }
 

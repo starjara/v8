@@ -11,10 +11,6 @@
 #include "src/codegen/reloc-info.h"
 #include "src/objects/instruction-stream-inl.h"
 
-extern "C" {
-#include "src/common/verse.h"
-}
-
 namespace v8 {
 namespace internal {
 
