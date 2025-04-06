@@ -14,6 +14,11 @@
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
 
+/* JARA: For Dom-V */
+extern "C" {
+  #include "src/domv.h"
+}
+
 namespace v8 {
 namespace internal {
 
@@ -122,6 +127,10 @@ void InstructionStream::Finalize(Tagged<Code> code,
   DisallowGarbageCollection no_gc;
   base::Optional<WriteBarrierPromise> promise;
 
+  /* JARA: inline function log */
+  // printf("[d8-instruction-stream-inl.h] Enter: %s\n", __PRETTY_FUNCTION__);
+  /* End of JARA */
+
   // Copy the relocation info first before we unlock the Jit allocation.
   // TODO(sroettger): reloc info should live in protected memory.
   DCHECK_EQ(reloc_info->length(), desc.reloc_size);
@@ -151,7 +160,10 @@ void InstructionStream::Finalize(Tagged<Code> code,
     // Publish the code pointer after the istream has been fully initialized.
     // TODO(sroettger): this write should go through writable_allocation. At
     // this point, set_code could probably be removed entirely.
+    
+    /* JARA: May not need? */
     set_code(code, kReleaseStore);
+    /* End of JARA */
   }
 
   // Trigger the write barriers after we dropped the JIT write permissions.
@@ -186,9 +198,23 @@ Tagged<Code> InstructionStream::code(AcquireLoadTag tag) const {
 void InstructionStream::set_code(Tagged<Code> value, ReleaseStoreTag tag) {
   DCHECK(!ObjectInYoungGeneration(value));
   DCHECK(IsTrustedSpaceObject(value));
+
+  // printf("this: %p\toffset: 0x%x\tsize: 0x%lx\n", this, kCodeOffset, sizeof(value));
+  // printf("kCodeOffset: 0x%x\tProtectedPointerField: 0x%lx\n",
+  // 	 kCodeOffset, this->RawProtectedPointerField(kCodeOffset));
+
   WriteProtectedPointerField(kCodeOffset, value, tag);
-  CONDITIONAL_PROTECTED_POINTER_WRITE_BARRIER(*this, kCodeOffset, value,
-                                              UPDATE_WRITE_BARRIER);
+  // CONDITIONAL_PROTECTED_POINTER_WRITE_BARRIER(*this, kCodeOffset, value,
+  //                                             UPDATE_WRITE_BARRIER);
+  
+  /* JARA: Write through domv_write */
+  // printf("Access\n");
+  // printf("0x%lx\n", this->RawProtectedPointerField(kCodeOffset).address());
+  // printf("Success\n");
+  Address addr = this->RawProtectedPointerField(kCodeOffset).address();
+  // printf("0x%lx\n", addr);
+  domv_write((void *)(addr), &value, sizeof(value), 0);
+  /* End of JARA */
 }
 
 bool InstructionStream::TryGetCode(Tagged<Code>* code_out,

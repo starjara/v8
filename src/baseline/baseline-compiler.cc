@@ -55,6 +55,11 @@
 #error Unsupported target architecture.
 #endif
 
+/* JARA: For Dom-V */
+//#define LOG_E printf("[d8-baseline-compiler.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 namespace baseline {
@@ -285,6 +290,9 @@ BaselineCompiler::BaselineCompiler(
       zone_(local_isolate->allocator(), ZONE_NAME),
       labels_(zone_.AllocateArray<Label>(bytecode_->length())),
       label_tags_(2*bytecode_->length(), &zone_) {
+
+  LOG_E
+    
   // Empirically determined expected size of the offset table at the 95th %ile,
   // based on the size of the bytecode, to be:
   //
@@ -302,6 +310,8 @@ BaselineCompiler::BaselineCompiler(
                 : RuntimeCallCounterId::kCompileBackgroundBaseline##rcs)
 
 void BaselineCompiler::GenerateCode() {
+  LOG_E
+    
   {
     RCS_BASELINE_SCOPE(PreVisit);
     // Mark exception handlers as valid indirect jump targets. This is required
@@ -332,6 +342,8 @@ void BaselineCompiler::GenerateCode() {
 }
 
 MaybeHandle<Code> BaselineCompiler::Build() {
+  LOG_E
+    
   RCS_BASELINE_SCOPE(Build);
   CodeDesc desc;
   __ GetCode(local_isolate_, &desc);

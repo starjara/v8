@@ -151,6 +151,11 @@
 #include "src/compiler/turboshaft/wasm-revec-phase.h"
 #endif  // V8_ENABLE_WASM_SIMD256_REVEC
 
+/* JARA: For Dom-V */
+//#define LOG_E printf("[d8-pipeline.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 namespace compiler {
@@ -4104,6 +4109,9 @@ bool PipelineImpl::SelectInstructionsAndAssemble(
 
 MaybeHandle<Code> PipelineImpl::GenerateCode(CallDescriptor* call_descriptor,
                                              bool turboshaft) {
+
+  LOG_E
+  
   if (!SelectInstructionsAndAssemble(call_descriptor, turboshaft)) {
     return MaybeHandle<Code>();
   }

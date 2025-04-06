@@ -11,6 +11,11 @@
 #include "src/heap/heap-inl.h"
 #include "src/logging/counters.h"
 
+/* JARA: For Dom-V */
+//#define LOG_E printf("[d8-heap-allocator.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 
@@ -110,6 +115,9 @@ constexpr AllocationSpace AllocationTypeToGCSpace(AllocationType type) {
 AllocationResult HeapAllocator::AllocateRawWithLightRetrySlowPath(
     int size, AllocationType allocation, AllocationOrigin origin,
     AllocationAlignment alignment) {
+
+  LOG_E
+  
   AllocationResult result = AllocateRaw(size, allocation, origin, alignment);
   if (!result.IsFailure()) {
     return result;
@@ -138,6 +146,9 @@ AllocationResult HeapAllocator::AllocateRawWithRetryOrFailSlowPath(
     AllocationAlignment alignment) {
   AllocationResult result =
       AllocateRawWithLightRetrySlowPath(size, allocation, origin, alignment);
+
+  LOG_E
+  
   if (!result.IsFailure()) return result;
 
   if (IsSharedAllocationType(allocation)) {

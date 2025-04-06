@@ -90,6 +90,11 @@
 #include "src/heap/local-factory-inl.h"
 #include "src/heap/local-heap-inl.h"
 
+/* JARA: For Dom-V */
+//#define LOG_E printf("[d8-factory.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 
@@ -119,6 +124,8 @@ MaybeHandle<Code> Factory::CodeBuilder::BuildInternal(
     bool retry_allocation_or_fail) {
   Handle<TrustedByteArray> reloc_info =
       NewTrustedByteArray(code_desc_.reloc_size);
+
+  LOG_E
 
   // Basic block profiling data for builtins is stored in the JS heap rather
   // than in separately-allocated C++ objects. Allocate that data now if
@@ -213,7 +220,7 @@ MaybeHandle<Code> Factory::CodeBuilder::BuildInternal(
             ->PatchBasicBlockCountersReference(
                 handle(on_heap_profiler_data->counts(), isolate_));
       }
-
+      
       // Migrate generated code.
       // The generated code can contain embedded objects (typically from
       // handles) in a pointer-to-tagged-value format (i.e. with indirection
@@ -246,11 +253,15 @@ MaybeHandle<Code> Factory::CodeBuilder::BuildInternal(
   }
 #endif  // ENABLE_DISASSEMBLER
 
+
   return code;
 }
 
 Tagged<HeapObject> Factory::CodeBuilder::AllocateUninitializedInstructionStream(
     bool retry_allocation_or_fail) {
+
+  LOG_E
+    
   LocalHeap* heap = local_isolate_->heap();
   Tagged<HeapObject> result;
   const int object_size = InstructionStream::SizeFor(code_desc_.body_size());

@@ -176,9 +176,6 @@
 // Has to be the last include (doesn't have include guards):
 #include "src/api/api-macros.h"
 
-/* JARA: For Dom-V */
-#define LOG_E printf("[d8-api.cc] Enter: %s\n", __PRETTY_FUNCTION__);
-
 namespace v8 {
 
 static OOMErrorCallback g_oom_error_callback = nullptr;
@@ -524,7 +521,7 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
     return base::Malloc(length);
   }
 
-  void Free(void* data, size_t) override { base::Free(data); }
+  void Free(void* data, size_t) override { llocator::Free\n");base::Free(data); }
 
   void* Reallocate(void* data, size_t old_length, size_t new_length) override {
     void* new_data = base::Realloc(data, new_length);
@@ -2788,9 +2785,6 @@ MaybeLocal<Script> ScriptCompiler::Compile(Local<Context> context,
                                            StreamedSource* v8_source,
                                            Local<String> full_source_string,
                                            const ScriptOrigin& origin) {
-
-  LOG_E
-    
   PREPARE_FOR_EXECUTION(context, ScriptCompiler, Compile);
   TRACE_EVENT_CALL_STATS_SCOPED(i_isolate, "v8", "V8.ScriptCompiler");
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.compile"),
@@ -2870,9 +2864,6 @@ ScriptCompiler::CachedData* ScriptCompiler::CreateCodeCacheForFunction(
 
 MaybeLocal<Script> Script::Compile(Local<Context> context, Local<String> source,
                                    ScriptOrigin* origin) {
-
-  LOG_E
-  
   if (origin) {
     ScriptCompiler::Source script_source(source, *origin);
     return ScriptCompiler::Compile(context, &script_source);

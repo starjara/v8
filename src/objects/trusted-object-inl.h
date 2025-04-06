@@ -12,6 +12,11 @@
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
 
+/* JARA: For Dom-V */
+extern "C" {
+  #include "src/domv.h"
+}
+
 namespace v8 {
 namespace internal {
 
@@ -40,8 +45,20 @@ void TrustedObject::WriteProtectedPointerField(int offset,
 void TrustedObject::WriteProtectedPointerField(int offset,
                                                Tagged<TrustedObject> value,
                                                ReleaseStoreTag) {
+  /*
   TaggedField<TrustedObject, 0, TrustedSpaceCompressionScheme>::Release_Store(
       *this, offset, value);
+      */
+
+  /* JARA: Domv_write */
+  if(offset == 0x18){
+    TaggedField<TrustedObject, 0, TrustedSpaceCompressionScheme>::Release_Store(
+      *this, offset, value);
+  }
+  else {
+    domv_write((void *)(this->address() + offset), &value, sizeof(value), 0);
+  }
+  /* End of JARA */
 }
 
 bool TrustedObject::IsProtectedPointerFieldCleared(int offset) const {

@@ -11,6 +11,11 @@
 #include "src/codegen/reloc-info.h"
 #include "src/objects/instruction-stream-inl.h"
 
+/* JARA: For Dom-V */
+// #define LOG_E printf("[d8-instruction-stream.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 
@@ -37,6 +42,9 @@ InstructionStream::WriteBarrierPromise InstructionStream::RelocateFromDesc(
   WriteBarrierPromise write_barrier_promise;
   Assembler* origin = desc.origin;
   const int mode_mask = RelocInfo::PostCodegenRelocationMask();
+
+  LOG_E
+
   for (WritableRelocIterator it(jit_allocation, *this, constant_pool,
                                 mode_mask);
        !it.done(); it.next()) {
@@ -69,6 +77,7 @@ InstructionStream::WriteBarrierPromise InstructionStream::RelocateFromDesc(
       // below.
       it.rinfo()->set_target_address(*this, p, UPDATE_WRITE_BARRIER,
                                      SKIP_ICACHE_FLUSH);
+
       DCHECK_EQ(p, it.rinfo()->target_address());
     } else if (RelocInfo::IsWasmStubCall(mode)) {
 #if V8_ENABLE_WEBASSEMBLY

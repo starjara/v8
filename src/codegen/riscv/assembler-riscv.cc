@@ -43,6 +43,11 @@
 #include "src/diagnostics/disassembler.h"
 #include "src/objects/heap-number-inl.h"
 
+/* JARA: For Dom-V */
+// #define LOG_E printf("[d8-assembler-riscv.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 // Get the CPU features enabled by the build. For cross compilation the
@@ -1470,6 +1475,7 @@ void Assembler::CheckTrampolinePool() {
 void Assembler::set_target_address_at(Address pc, Address constant_pool,
                                       Address target,
                                       ICacheFlushMode icache_flush_mode) {
+  LOG_E
   Instr* instr = reinterpret_cast<Instr*>(pc);
   if (IsAuipc(*instr)) {
 #if V8_TARGET_ARCH_RISCV64
@@ -1566,6 +1572,7 @@ Address Assembler::target_address_at(Address pc) {
 // Note that this assumes the use of SV48, the 48-bit virtual memory system.
 void Assembler::set_target_value_at(Address pc, uint64_t target,
                                     ICacheFlushMode icache_flush_mode) {
+  LOG_E
   DEBUG_PRINTF("set_target_value_at: pc: %" PRIxPTR "\ttarget: %" PRIx64 "\n",
                pc, target);
   uint32_t* p = reinterpret_cast<uint32_t*>(pc);
@@ -1586,18 +1593,45 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
   int64_t high_31 = (target >> 17) & 0x7fffffff;  // 31 bits
   int64_t high_20 = ((high_31 + 0x800) >> 12);    // 19 bits
   int64_t low_12 = high_31 & 0xfff;               // 12 bits
-  *p = *p & 0xfff;
-  *p = *p | ((int32_t)high_20 << 12);
-  *(p + 1) = *(p + 1) & 0xfffff;
-  *(p + 1) = *(p + 1) | ((int32_t)low_12 << 20);
-  *(p + 2) = *(p + 2) & 0xfffff;
-  *(p + 2) = *(p + 2) | (11 << 20);
-  *(p + 3) = *(p + 3) & 0xfffff;
-  *(p + 3) = *(p + 3) | ((int32_t)b11 << 20);
-  *(p + 4) = *(p + 4) & 0xfffff;
-  *(p + 4) = *(p + 4) | (6 << 20);
-  *(p + 5) = *(p + 5) & 0xfffff;
-  *(p + 5) = *(p + 5) | ((int32_t)a6 << 20);
+  /* JARA: Write through domv_write */
+
+  /* End of JARA */
+  uint32_t val = *p & 0xfff;
+  val = val | ((int32_t)high_20 << 12);
+  domv_write(p, &val, sizeof(val), 0);
+
+  val = *(p + 1) & 0xfffff;
+  val = val | ((int32_t)low_12 << 20);
+  domv_write((p + 1), &val, sizeof(val), 0);
+
+  val = *(p + 2) & 0xfffff;
+  val = val | (11 << 20);
+  domv_write((p + 2), &val, sizeof(val), 0);
+    
+  val = *(p + 3) & 0xfffff;
+  val = val | ((int32_t)b11 << 20);
+  domv_write((p + 3), &val, sizeof(val), 0);
+
+  val = *(p + 4) & 0xfffff;
+  val = val | (6 << 20);
+  domv_write((p + 4), &val, sizeof(val), 0);
+
+  val = *(p + 5) & 0xfffff;
+  val = val | ((int32_t)a6 << 20);
+  domv_write((p + 5), &val, sizeof(val), 0);
+
+  // *p = *p & 0xfff;
+  // *p = *p | ((int32_t)high_20 << 12);
+  // *(p + 1) = *(p + 1) & 0xfffff;
+  // *(p + 1) = *(p + 1) | ((int32_t)low_12 << 20);
+  // *(p + 2) = *(p + 2) & 0xfffff;
+  // *(p + 2) = *(p + 2) | (11 << 20);
+  // *(p + 3) = *(p + 3) & 0xfffff;
+  // *(p + 3) = *(p + 3) | ((int32_t)b11 << 20);
+  // *(p + 4) = *(p + 4) & 0xfffff;
+  // *(p + 4) = *(p + 4) | (6 << 20);
+  // *(p + 5) = *(p + 5) & 0xfffff;
+  // *(p + 5) = *(p + 5) | ((int32_t)a6 << 20);
   if (icache_flush_mode != SKIP_ICACHE_FLUSH) {
     FlushInstructionCache(pc, 8 * kInstrSize);
   }
@@ -1629,6 +1663,7 @@ Address Assembler::target_address_at(Address pc) {
 // Patching the address must replace all instructions, and flush the i-cache.
 void Assembler::set_target_value_at(Address pc, uint32_t target,
                                     ICacheFlushMode icache_flush_mode) {
+  LOG_E
   DEBUG_PRINTF("set_target_value_at: pc: %x\ttarget: %x\n", pc, target);
   uint32_t* p = reinterpret_cast<uint32_t*>(pc);
 #ifdef DEBUG

@@ -9,6 +9,12 @@
 #include "src/base/functional.h"
 #include "src/flags/flags.h"
 
+/* JARA: For dom-v */
+extern "C" {
+  #include "src/domv.h"
+}
+/* End of JARA */
+
 #if V8_ENABLE_STICKY_MARK_BITS_BOOL
 #define UNREACHABLE_WITH_STICKY_MARK_BITS() UNREACHABLE()
 #else
@@ -198,18 +204,66 @@ class V8_EXPORT_PRIVATE MemoryChunk final {
 
   V8_INLINE MainThreadFlags GetFlags() const { return main_thread_flags_; }
 
-  V8_INLINE void SetFlagUnlocked(Flag flag) { main_thread_flags_ |= flag; }
+  V8_INLINE void SetFlagUnlocked(Flag flag) {
+    //printf("SetFlagUnlocked\n");
+    //printf("%p\t0x%lx\t0x%lx\n", &main_thread_flags_, main_thread_flags_, flag);
+
+    main_thread_flags_ |= flag;
+
+    /* JARA: Write through domv_write */
+    // long unsigned int temp = main_thread_flags_ | flag;
+    // if((main_thread_flags_ && IS_EXECUTABLE) || (main_thread_flags_ && IS_TRUSTED))
+    //   domv_write(&main_thread_flags_, &temp, sizeof(temp), 0);
+    // else 
+    //   main_thread_flags_ |= flag;
+    /* End of JARA */
+  }
   V8_INLINE void ClearFlagUnlocked(Flag flag) {
+    //printf("ClearFlagUnlocked\n");
+    //printf("%p\t0x%lx\t0x%lx\n", &main_thread_flags_, main_thread_flags_, flag);
+    
     main_thread_flags_ = main_thread_flags_.without(flag);
+
+    /* JARA: Write through domv_write */
+    //long unsigned int temp = main_thread_flags_.without(flag);
+    //domv_write(&main_thread_flags_, &temp, sizeof(temp), 0);
+    /* End of JARA */
   }
   // Set or clear multiple flags at a time. `mask` indicates which flags are
   // should be replaced with new `flags`.
   V8_INLINE void ClearFlagsUnlocked(MainThreadFlags flags) {
-    main_thread_flags_ &= ~flags;
+    //printf("ClearFlagsUnlocked\n");
+    //printf("%p\t0x%lx\t0x%lx\n", &main_thread_flags_, main_thread_flags_, flags);
+    
+    //main_thread_flags_ &= ~flags;
+
+    /* JARA Write through dom-v */
+    if(main_thread_flags_ & IS_EXECUTABLE) {
+      long unsigned int temp = main_thread_flags_ & ~flags;
+      domv_write(&main_thread_flags_, &temp, sizeof(temp), 0);
+    }
+    else 
+      main_thread_flags_ &= ~flags;
+    /* End of JARA */
+
   }
   V8_INLINE void SetFlagsUnlocked(MainThreadFlags flags,
                                   MainThreadFlags mask = kAllFlagsMask) {
-    main_thread_flags_ = (main_thread_flags_ & ~mask) | (flags & mask);
+
+    //printf("SetFlagsUnlocked\n");
+    //printf("%p\t0x%lx\t0x%lx\n", &main_thread_flags_, main_thread_flags_, flags);
+
+    //main_thread_flags_ = (main_thread_flags_ & ~mask) | (flags & mask);
+
+    /* JARA Write through dom-v */
+    if(main_thread_flags_ & IS_EXECUTABLE) {
+      long unsigned int temp = (main_thread_flags_ & ~mask) | (flags & mask);
+      domv_write(&main_thread_flags_, &temp, sizeof(temp), 0);
+    }
+    else 
+      main_thread_flags_ = (main_thread_flags_ & ~mask) | (flags & mask);
+    /* End of JARA */
+
   }
 
   V8_INLINE void SetFlagNonExecutable(Flag flag) {

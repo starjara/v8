@@ -11,6 +11,11 @@
 #include "src/heap/read-only-spaces.h"
 #include "src/heap/trusted-range.h"
 
+/* JARA: For Dom-V */
+//#define LOG_E printf("[d8-memory-chunk.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 
@@ -43,6 +48,7 @@ MemoryChunk::MemoryChunk(MainThreadFlags flags, MemoryChunkMetadata* metadata)
       metadata_(metadata)
 #endif
 {
+  LOG_E
 #ifdef V8_ENABLE_SANDBOX
   DCHECK_IMPLIES(metadata_pointer_table_[metadata_index_] != nullptr,
                  metadata_pointer_table_[metadata_index_] == metadata);
@@ -218,6 +224,8 @@ MemoryChunk::MainThreadFlags MemoryChunk::YoungGenerationPageFlags(
 
 void MemoryChunk::SetOldGenerationPageFlags(MarkingMode marking_mode,
                                             bool in_shared_space) {
+  LOG_E
+    
   MainThreadFlags flags_to_set =
       OldGenerationPageFlags(marking_mode, in_shared_space);
   MainThreadFlags flags_to_clear = NO_FLAGS;
@@ -235,6 +243,9 @@ void MemoryChunk::SetOldGenerationPageFlags(MarkingMode marking_mode,
     }
   }
 
+  //printf("Current flag: 0x%x\n", main_thread_flags_);
+  //printf("flags_to_set: 0x%x\tflags_to_clear: 0x%x\n", flags_to_set, flags_to_clear);
+  
   SetFlagsUnlocked(flags_to_set, flags_to_set);
   ClearFlagsUnlocked(flags_to_clear);
 }

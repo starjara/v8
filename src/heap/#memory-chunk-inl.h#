@@ -9,8 +9,7 @@
 #include "src/heap/memory-chunk.h"
 
 /* JARA: For Dom-V */
-//#define LOG_E_M_H printf("[d8-memory-chunk-inl.h] Enter: %s\n", __PRETTY_FUNCTION__);
-#define LOG_E_M_H 
+#
 /* End of JARA */
 
 namespace v8 {
@@ -19,7 +18,6 @@ namespace internal {
 MemoryChunkMetadata* MemoryChunk::Metadata() {
   // If this changes, we also need to update
   // CodeStubAssembler::PageMetadataFromMemoryChunk
-  LOG_E_M_H
 #ifdef V8_ENABLE_SANDBOX
   DCHECK_LT(metadata_index_, kMetadataPointerTableSizeMask);
   MemoryChunkMetadata* metadata =
@@ -34,14 +32,10 @@ MemoryChunkMetadata* MemoryChunk::Metadata() {
 }
 
 const MemoryChunkMetadata* MemoryChunk::Metadata() const {
-  LOG_E_M_H
   return const_cast<MemoryChunk*>(this)->Metadata();
 }
 
-Heap* MemoryChunk::GetHeap() {
-  LOG_E_M_H
-  return Metadata()->heap();
-}
+Heap* MemoryChunk::GetHeap() { return Metadata()->heap(); }
 
 }  // namespace internal
 }  // namespace v8

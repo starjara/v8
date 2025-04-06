@@ -7,6 +7,12 @@
 #include "src/common/code-memory-access-inl.h"
 #include "src/utils/allocation.h"
 
+/* JARA: For Dom-V */
+
+// #define LOG_E printf("[d8-code-memory-access.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 
@@ -63,6 +69,12 @@ void ThreadIsolation::ConstructNew(T** ptr, Args&&... args) {
 // static
 template <typename T>
 void ThreadIsolation::Delete(T* ptr) {
+  LOG_E
+  /* JARA: Destory the vm */
+  /* printf("dom-v destroy: %d\n", ThreadIsolation::vmid()); */
+  /* domv_destroy(ThreadIsolation::vmid()); */
+  /* trusted_data_.vmid = -1; */
+  /* End of JARA */
   if (Enabled()) {
     ptr->~T();
     trusted_data_.allocator->Free(ptr);
@@ -74,6 +86,9 @@ void ThreadIsolation::Delete(T* ptr) {
 // static
 void ThreadIsolation::Initialize(
     ThreadIsolatedAllocator* thread_isolated_allocator) {
+
+  LOG_E
+
 #if DEBUG
   trusted_data_.initialized = true;
 #endif
@@ -102,6 +117,12 @@ void ThreadIsolation::Initialize(
 #endif
   }
 
+  /* JARA: Create a domain */
+  domv_create(0);
+  trusted_data_.vmid = 0;
+  // printf("Domain created: %d\n", trusted_data_.vmid);
+  /* End of JARA */
+
   {
     // We need to allocate the memory for jit page tracking even if we don't
     // enable the ThreadIsolation protections.
@@ -109,6 +130,21 @@ void ThreadIsolation::Initialize(
     ConstructNew(&trusted_data_.jit_pages_mutex_);
     ConstructNew(&trusted_data_.jit_pages_);
   }
+  
+  /* JARA: Set domain */
+  // Check that our compile time assumed page size that we use for padding was
+  // large enough.
+  CHECK_GE(THREAD_ISOLATION_ALIGN_SZ,
+           GetPlatformPageAllocator()->CommitPageSize());
+
+  // TODO(sroettger): make this immutable once there's OS support.
+  /*
+  base::MemoryProtectionKey::SetPermissionsAndKey(
+      {reinterpret_cast<Address>(&trusted_data_), sizeof(trusted_data_)},
+      v8::PageAllocator::Permission::kRead,
+      base::MemoryProtectionKey::kDefaultProtectionKey);
+  */
+  /* End Of JARA */
 
   if (!enable) {
     return;
@@ -126,11 +162,14 @@ void ThreadIsolation::Initialize(
       v8::PageAllocator::Permission::kRead,
       base::MemoryProtectionKey::kDefaultProtectionKey);
 #endif
+  
+
 }
 
 // static
 ThreadIsolation::JitPageReference ThreadIsolation::LookupJitPageLocked(
     Address addr, size_t size) {
+  LOG_E
   trusted_data_.jit_pages_mutex_->AssertHeld();
   base::Optional<JitPageReference> jit_page =
       TryLookupJitPageLocked(addr, size);
@@ -141,6 +180,7 @@ ThreadIsolation::JitPageReference ThreadIsolation::LookupJitPageLocked(
 // static
 ThreadIsolation::JitPageReference ThreadIsolation::LookupJitPage(Address addr,
                                                                  size_t size) {
+  LOG_E
   base::MutexGuard guard(trusted_data_.jit_pages_mutex_);
   return LookupJitPageLocked(addr, size);
 }
@@ -148,6 +188,7 @@ ThreadIsolation::JitPageReference ThreadIsolation::LookupJitPage(Address addr,
 // static
 WritableJitPage ThreadIsolation::LookupWritableJitPage(Address addr,
                                                        size_t size) {
+  LOG_E
   return WritableJitPage(addr, size);
 }
 
@@ -155,12 +196,14 @@ WritableJitPage ThreadIsolation::LookupWritableJitPage(Address addr,
 base::Optional<ThreadIsolation::JitPageReference>
 ThreadIsolation::TryLookupJitPage(Address addr, size_t size) {
   base::MutexGuard guard(trusted_data_.jit_pages_mutex_);
+  LOG_E
   return TryLookupJitPageLocked(addr, size);
 }
 
 // static
 base::Optional<ThreadIsolation::JitPageReference>
 ThreadIsolation::TryLookupJitPageLocked(Address addr, size_t size) {
+  LOG_E
   trusted_data_.jit_pages_mutex_->AssertHeld();
 
   Address end = addr + size;
@@ -203,17 +246,19 @@ ThreadIsolation::TryLookupJitPageLocked(Address addr, size_t size) {
   if (jit_page.End() < end) {
     return {};
   }
-
+ 
   return jit_page;
 }
 
 namespace {
 
 size_t GetSize(ThreadIsolation::JitPage* jit_page) {
+  LOG_E
   return ThreadIsolation::JitPageReference(jit_page, 0).Size();
 }
 
 size_t GetSize(ThreadIsolation::JitAllocation allocation) {
+  LOG_E
   return allocation.Size();
 }
 
@@ -221,6 +266,7 @@ template <class T>
 void CheckForRegionOverlap(const T& map, Address addr, size_t size) {
   // The data is untrusted from the pov of CFI, so we check that there's no
   // overlaps with existing regions etc.
+  LOG_E
   CHECK_GE(addr + size, addr);
 
   // Find an entry in the map with key > addr
@@ -248,6 +294,7 @@ void CheckForRegionOverlap(const T& map, Address addr, size_t size) {
 template <typename Iterator>
 bool AllocationIsBehindRange(Address range_start, Address range_size,
                              const Iterator& it) {
+  LOG_E
   Address range_end = range_start + range_size;
   Address allocation_start = it->first;
   Address allocation_size = it->second.Size();
@@ -263,17 +310,19 @@ bool AllocationIsBehindRange(Address range_start, Address range_size,
 
 ThreadIsolation::JitPageReference::JitPageReference(class JitPage* jit_page,
                                                     base::Address address)
-    : page_lock_(&jit_page->mutex_), jit_page_(jit_page), address_(address) {}
+    : page_lock_(&jit_page->mutex_), jit_page_(jit_page), address_(address) {LOG_E}
 
 ThreadIsolation::JitPage::~JitPage() {
   // TODO(sroettger): check that the page is not in use (scan shadow stacks).
 }
 
 size_t ThreadIsolation::JitPageReference::Size() const {
+  LOG_E
   return jit_page_->size_;
 }
 
 void ThreadIsolation::JitPageReference::Shrink(class JitPage* tail) {
+  LOG_E
   jit_page_->size_ -= tail->size_;
   // Move all allocations that are out of bounds.
   auto it = jit_page_->allocations_.lower_bound(End());
@@ -282,10 +331,12 @@ void ThreadIsolation::JitPageReference::Shrink(class JitPage* tail) {
 }
 
 void ThreadIsolation::JitPageReference::Expand(size_t offset) {
+  LOG_E
   jit_page_->size_ += offset;
 }
 
 void ThreadIsolation::JitPageReference::Merge(JitPageReference& next) {
+  LOG_E
   DCHECK_EQ(End(), next.Address());
   jit_page_->size_ += next.jit_page_->size_;
   next.jit_page_->size_ = 0;
@@ -297,6 +348,7 @@ ThreadIsolation::JitAllocation&
 ThreadIsolation::JitPageReference::RegisterAllocation(base::Address addr,
                                                       size_t size,
                                                       JitAllocationType type) {
+  LOG_E
   // The data is untrusted from the pov of CFI, so the checks are security
   // sensitive.
   CHECK_GE(addr, address_);
@@ -315,6 +367,7 @@ ThreadIsolation::JitAllocation&
 ThreadIsolation::JitPageReference::LookupAllocation(base::Address addr,
                                                     size_t size,
                                                     JitAllocationType type) {
+  LOG_E
   auto it = jit_page_->allocations_.find(addr);
   CHECK_NE(it, jit_page_->allocations_.end());
   CHECK_EQ(it->second.Size(), size);
@@ -324,12 +377,14 @@ ThreadIsolation::JitPageReference::LookupAllocation(base::Address addr,
 
 void ThreadIsolation::JitPageReference::UnregisterAllocation(
     base::Address addr) {
+  LOG_E
   // TODO(sroettger): check that the memory is not in use (scan shadow stacks).
   CHECK_EQ(jit_page_->allocations_.erase(addr), 1);
 }
 
 void ThreadIsolation::JitPageReference::UnregisterRange(base::Address start,
                                                         size_t size) {
+  LOG_E
   auto begin = jit_page_->allocations_.lower_bound(start);
   auto end = begin;
   while (end != jit_page_->allocations_.end() &&
@@ -375,12 +430,14 @@ void ThreadIsolation::JitPageReference::UnregisterAllocationsExcept(
 
 base::Address ThreadIsolation::JitPageReference::StartOfAllocationAt(
     base::Address inner_pointer) {
+  LOG_E
   return AllocationContaining(inner_pointer).first;
 }
 
 std::pair<base::Address, ThreadIsolation::JitAllocation&>
 ThreadIsolation::JitPageReference::AllocationContaining(
     base::Address inner_pointer) {
+  LOG_E
   auto it = jit_page_->allocations_.upper_bound(inner_pointer);
   CHECK_NE(it, jit_page_->allocations_.begin());
   it--;
@@ -393,17 +450,44 @@ ThreadIsolation::JitPageReference::AllocationContaining(
 void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
   CFIMetadataWriteScope write_scope("Adding new executable memory.");
 
+  LOG_E
+
   base::MutexGuard guard(trusted_data_.jit_pages_mutex_);
   CheckForRegionOverlap(*trusted_data_.jit_pages_, address, size);
   JitPage* jit_page;
   ConstructNew(&jit_page, size);
   trusted_data_.jit_pages_->emplace(address, jit_page);
+  
+  /* JARA: map JIT page to the domain */
+  // Incurring page fault to map the physical pages
+  char *ptr = (char *)address;
+  for (size_t offset = 0; offset < size; offset += 0x1000) {
+    ptr[offset] = 0;  
+  }
+
+
+  /* printf("domv_mmap\n"); */
+  /* printf("addr: 0x%lx\tsize: 0x%lx\n", address, size); */
+  domv_mmap(address, (void *)address, size, PROT_READ | PROT_WRITE);
+  /* End of JARA */
+  
 }
 
 void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
   // TODO(sroettger): merge the write scopes higher up.
   CFIMetadataWriteScope write_scope("Removing executable memory.");
 
+  LOG_E
+  
+  /* JARA: unmap jit page from the domain */
+  /*   printf("domv_munmap\n"); */
+  /* printf("addr: 0x%lx\tsize: 0x%lx\n", address, size); */
+ 
+  mprotect((void *)address, size, PROT_READ | PROT_WRITE | PROT_EXEC);
+  domv_munmap((void *)address);
+  /* End of JARA */
+
+  
   JitPage* to_delete;
   {
     base::MutexGuard guard(trusted_data_.jit_pages_mutex_);
@@ -445,6 +529,7 @@ void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
 
 // static
 bool ThreadIsolation::MakeExecutable(Address address, size_t size) {
+  LOG_E
   DCHECK(Enabled());
 
   // TODO(sroettger): ensure that this can only happen at prcoess startup.
@@ -460,6 +545,9 @@ bool ThreadIsolation::MakeExecutable(Address address, size_t size) {
 // static
 WritableJitAllocation ThreadIsolation::RegisterJitAllocation(
     Address obj, size_t size, JitAllocationType type) {
+
+  LOG_E
+    
   return WritableJitAllocation(
       obj, size, type, WritableJitAllocation::JitAllocationSource::kRegister);
 }
@@ -467,6 +555,7 @@ WritableJitAllocation ThreadIsolation::RegisterJitAllocation(
 // static
 WritableJitAllocation ThreadIsolation::RegisterInstructionStreamAllocation(
     Address addr, size_t size) {
+  LOG_E
   return RegisterJitAllocation(addr, size,
                                JitAllocationType::kInstructionStream);
 }
@@ -474,6 +563,7 @@ WritableJitAllocation ThreadIsolation::RegisterInstructionStreamAllocation(
 // static
 WritableJitAllocation ThreadIsolation::LookupJitAllocation(
     Address addr, size_t size, JitAllocationType type) {
+  LOG_E
   return WritableJitAllocation(
       addr, size, type, WritableJitAllocation::JitAllocationSource::kLookup);
 }
@@ -482,6 +572,7 @@ WritableJitAllocation ThreadIsolation::LookupJitAllocation(
 WritableJumpTablePair ThreadIsolation::LookupJumpTableAllocations(
     Address jump_table_address, size_t jump_table_size,
     Address far_jump_table_address, size_t far_jump_table_size) {
+  LOG_E
   return WritableJumpTablePair(jump_table_address, jump_table_size,
                                far_jump_table_address, far_jump_table_size);
 }
@@ -490,6 +581,8 @@ WritableJumpTablePair ThreadIsolation::LookupJumpTableAllocations(
 void ThreadIsolation::RegisterJitAllocations(Address start,
                                              const std::vector<size_t>& sizes,
                                              JitAllocationType type) {
+
+  LOG_E
   CFIMetadataWriteScope write_scope("Register bulk allocations.");
 
   size_t total_size = 0;
@@ -527,12 +620,14 @@ void ThreadIsolation::UnregisterWasmAllocation(Address addr, size_t size) {
 
 ThreadIsolation::JitPageReference ThreadIsolation::SplitJitPage(Address addr,
                                                                 size_t size) {
+  LOG_E
   base::MutexGuard guard(trusted_data_.jit_pages_mutex_);
   return SplitJitPageLocked(addr, size);
 }
 
 ThreadIsolation::JitPageReference ThreadIsolation::SplitJitPageLocked(
     Address addr, size_t size) {
+  LOG_E
   trusted_data_.jit_pages_mutex_->AssertHeld();
 
   JitPageReference jit_page = LookupJitPageLocked(addr, size);
@@ -560,6 +655,7 @@ ThreadIsolation::JitPageReference ThreadIsolation::SplitJitPageLocked(
 std::pair<ThreadIsolation::JitPageReference, ThreadIsolation::JitPageReference>
 ThreadIsolation::SplitJitPages(Address addr1, size_t size1, Address addr2,
                                size_t size2) {
+  LOG_E
   if (addr1 > addr2) {
     auto reversed_pair = SplitJitPages(addr2, size2, addr1, size1);
     return {std::move(reversed_pair.second), std::move(reversed_pair.first)};
@@ -575,6 +671,7 @@ ThreadIsolation::SplitJitPages(Address addr1, size_t size1, Address addr2,
 // static
 base::Optional<Address> ThreadIsolation::StartOfJitAllocationAt(
     Address inner_pointer) {
+  LOG_E
   CFIMetadataWriteScope write_scope("StartOfJitAllocationAt");
   base::Optional<JitPageReference> page = TryLookupJitPage(inner_pointer, 1);
   if (!page) {
@@ -604,6 +701,7 @@ class MutexUnlocker {
 
 // static
 bool ThreadIsolation::CanLookupStartOfJitAllocationAt(Address inner_pointer) {
+  LOG_E
   CFIMetadataWriteScope write_scope("CanLookupStartOfJitAllocationAt");
 
   // Try to lock the pages mutex and the mutex of the page itself to prevent

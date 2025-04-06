@@ -56,9 +56,19 @@ class CodeSpaceWriteScope;
 
 #else  // V8_HAS_PKU_JIT_WRITE_PROTECT
 
-#define THREAD_ISOLATION_ALIGN_SZ 0
-#define THREAD_ISOLATION_ALIGN
-#define THREAD_ISOLATION_FILL_PAGE_SZ(size) 0
+  // Orig code 
+// #define THREAD_ISOLATION_ALIGN_SZ 0
+// #define THREAD_ISOLATION_ALIGN
+// #define THREAD_ISOLATION_FILL_PAGE_SZ(size) 0
+
+  /* JARA: Set alignment */
+#define THREAD_ISOLATION_ALIGN_SZ 0x1000
+#define THREAD_ISOLATION_ALIGN alignas(THREAD_ISOLATION_ALIGN_SZ)
+#define THREAD_ISOLATION_ALIGN_OFFSET_MASK (THREAD_ISOLATION_ALIGN_SZ - 1)
+#define THREAD_ISOLATION_FILL_PAGE_SZ(size)                                    \
+  ((THREAD_ISOLATION_ALIGN_SZ - ((size)&THREAD_ISOLATION_ALIGN_OFFSET_MASK)) % \
+   THREAD_ISOLATION_ALIGN_SZ)
+  /* End of JARA */
 
 #endif  // V8_HAS_PKU_JIT_WRITE_PROTECT
 
@@ -197,6 +207,9 @@ class V8_EXPORT ThreadIsolation {
 #if V8_HAS_PKU_JIT_WRITE_PROTECT
   static int pkey() { return trusted_data_.pkey; }
 #endif
+  /* JARA: domain number */
+  static int vmid() { return trusted_data_.vmid; }
+  /* End of JARA */
 
 #if DEBUG
   static bool initialized() { return trusted_data_.initialized; }
@@ -321,6 +334,9 @@ class V8_EXPORT ThreadIsolation {
 #if V8_HAS_PKU_JIT_WRITE_PROTECT
     int pkey = -1;
 #endif
+    /* JARA: Domain ID */
+    int vmid = -1;
+    /* End of JARA */
 
     base::Mutex* jit_pages_mutex_;
     JitPageMap* jit_pages_;

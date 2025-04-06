@@ -33,6 +33,11 @@
 #include "src/tracing/trace-event.h"
 #include "src/zone/zone-list-inl.h"
 
+/* JARA: For Dom-V */
+//#define LOG_E printf("[d8-parser.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 
@@ -564,6 +569,8 @@ void MaybeProcessSourceRanges(ParseInfo* parse_info, Expression* root,
 void Parser::ParseProgram(Isolate* isolate, Handle<Script> script,
                           ParseInfo* info,
                           MaybeHandle<ScopeInfo> maybe_outer_scope_info) {
+  LOG_E
+
   DCHECK_EQ(script->id(), flags().script_id());
 
   // It's OK to use the Isolate & counters here, since this function is only

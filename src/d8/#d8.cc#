@@ -122,12 +122,8 @@
 #endif
 
 /* JARA: For Dom-V */
-extern "C" {
-  #include "src/domv.h"
-}
-    
-//#define LOG_E printf("[d8-d8.cc] Enter: %s\n", __PRETTY_FUNCTION__);
-#define LOG_E 
+#include "src/domv.h"
+#define LOG_E printf("[d8-d8.cc] Enter: %s\n", __PRETTY_FUNCTION__);
 /* End of JARA */
 
 namespace v8 {
@@ -289,7 +285,6 @@ class MultiMappedAllocator : public ArrayBufferAllocatorBase {
     // We have to specify MAP_SHARED to make {mremap} below do what we want.
     int flags = MAP_SHARED | MAP_ANONYMOUS;
     void* real_alloc = mmap(nullptr, kChunkSize, prot, flags, -1, 0);
-    printf("real_alloc: %p\n", real_alloc);
     if (reinterpret_cast<intptr_t>(real_alloc) == -1) {
       // If we ran into some limit (physical or virtual memory, or number
       // of mappings, etc), return {nullptr}, which callers can handle.
@@ -6231,10 +6226,10 @@ int Shell::Main(int argc, char* argv[]) {
   }
   utf8_filenames.clear();
 #endif
- 
-  /* JARA: Destroy the domain */
+
+  /* JARA: Destroy a domain */
   domv_destroy(0);
-  /* End of JARA */
+  /* End of JARA 
   
   return result;
 }

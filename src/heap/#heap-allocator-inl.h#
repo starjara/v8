@@ -237,11 +237,6 @@ HeapAllocator::AllocateRawWith(int size, AllocationType allocation,
                                AllocationAlignment alignment) {
   AllocationResult result;
   Tagged<HeapObject> object;
-
-  /* JARA: inline file log */
-  //printf("[d8-heap-allocator-inl.h] Enter: %s\n", __PRETTY_FUNCTION__);
-  /* End of JARA */
-  
   size = ALIGN_TO_ALLOCATION_ALIGNMENT(size);
   if (allocation == AllocationType::kYoung) {
     result = AllocateRaw<AllocationType::kYoung>(size, origin, alignment);

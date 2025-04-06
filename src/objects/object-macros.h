@@ -16,6 +16,11 @@
 
 #include "src/base/memory.h"
 
+/* JARA: For dom-v */
+extern "C" {
+  #include "src/domv.h"
+}
+
 // V8 objects are defined as:
 //
 //     V8_OBJECT class Foo : public Base {

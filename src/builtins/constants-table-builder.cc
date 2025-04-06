@@ -9,6 +9,9 @@
 #include "src/objects/oddball-inl.h"
 #include "src/roots/roots-inl.h"
 
+/* JARA: For Dom-V */
+#define LOG_E printf("[d8-constants-table-builder.cc] %s\n", __PRETTY_FUNCTION__);
+
 namespace v8 {
 namespace internal {
 
@@ -99,6 +102,8 @@ void BuiltinsConstantsTableBuilder::PatchBasicBlockCountersReference(
 void BuiltinsConstantsTableBuilder::Finalize() {
   HandleScope handle_scope(isolate_);
 
+  LOG_E
+  
   DCHECK_EQ(ReadOnlyRoots(isolate_).empty_fixed_array(),
             isolate_->heap()->builtins_constants_table());
   DCHECK(isolate_->IsGeneratingEmbeddedBuiltins());

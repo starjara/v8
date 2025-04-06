@@ -21,6 +21,15 @@
 #include "src/logging/log.h"
 #include "src/utils/allocation.h"
 
+/* JARA: For Dom-V */
+extern "C" {
+  #include <sys/mman.h>
+}
+
+// #define LOG_E printf("[d8-memory-allocator.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+#define LOG_E
+/* End of JARA */
+
 namespace v8 {
 namespace internal {
 
@@ -131,6 +140,9 @@ Address MemoryAllocator::AllocateAlignedMemory(
     size_t chunk_size, size_t area_size, size_t alignment,
     AllocationSpace space, Executability executable, void* hint,
     VirtualMemory* controller) {
+
+  LOG_E
+    
   DCHECK_EQ(space == CODE_SPACE || space == CODE_LO_SPACE,
             executable == EXECUTABLE);
   v8::PageAllocator* page_allocator = this->page_allocator(space);
@@ -164,9 +176,15 @@ Address MemoryAllocator::AllocateAlignedMemory(
     ThreadIsolation::RegisterJitPage(base, chunk_size);
   }
 
+  //printf("Jit page allocated\n");
+
   UpdateAllocatedSpaceLimits(base, base + chunk_size, executable);
 
+  //printf("Space limit updated\n");
+
   *controller = std::move(reservation);
+
+  //printf("Set movable\n");
   return base;
 }
 
@@ -214,6 +232,8 @@ MemoryAllocator::AllocateUninitializedChunkAt(BaseSpace* space,
                        MemoryChunk::GetAlignmentForAllocation()));
   }
 #endif
+
+  LOG_E
 
   VirtualMemory reservation;
   size_t chunk_size = ComputeChunkSize(area_size, space->identity());
@@ -374,6 +394,7 @@ void MemoryAllocator::PerformFreeMemory(MutablePageMetadata* chunk_metadata) {
 
 void MemoryAllocator::Free(MemoryAllocator::FreeMode mode,
                            MutablePageMetadata* chunk_metadata) {
+  LOG_E
   MemoryChunk* chunk = chunk_metadata->Chunk();
   RecordMemoryChunkDestroyed(chunk);
 
@@ -401,6 +422,9 @@ void MemoryAllocator::Free(MemoryAllocator::FreeMode mode,
 PageMetadata* MemoryAllocator::AllocatePage(
     MemoryAllocator::AllocationMode alloc_mode, Space* space,
     Executability executable) {
+  
+  LOG_E
+    
   const size_t size =
       MemoryChunkLayout::AllocatableMemoryInMemoryChunk(space->identity());
   base::Optional<MemoryChunkAllocationResult> chunk_info;
@@ -430,7 +454,19 @@ PageMetadata* MemoryAllocator::AllocatePage(
   MemoryChunk::MainThreadFlags flags = metadata->InitialFlags(executable);
   if (executable) {
     RwxMemoryWriteScope scope("Initialize a new MemoryChunk.");
+    //printf("chunk_info->chunk: %p\tsize: 0x%lx\n", chunk_info->chunk, chunk_info->size);
+
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);
+
+    /* JARA: Allocate a memory chunk */
+    // chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata, true);
+    // domv_write(chunk_info->chunk, chunk, sizeof(chunk), 0);
+    
+    // printf("domv_mmap\n");
+    // domv_mmap((unsigned long)chunk, chunk, chunk_info->size, PROT_READ | PROT_WRITE);
+    mprotect((void *)chunk, chunk_info->size, PROT_READ | PROT_EXEC);
+    /* End of JARA */
+
   } else {
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);
   }
@@ -554,6 +590,7 @@ base::AddressRegion MemoryAllocator::ComputeDiscardMemoryArea(Address addr,
 bool MemoryAllocator::SetPermissionsOnExecutableMemoryChunk(VirtualMemory* vm,
                                                             Address start,
                                                             size_t chunk_size) {
+  LOG_E
   // All addresses and sizes must be aligned to the commit page size.
   DCHECK(IsAligned(start, GetCommitPageSize()));
   DCHECK_EQ(0, chunk_size % GetCommitPageSize());

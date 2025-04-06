@@ -31,11 +31,6 @@
 #include "src/objects/template-objects-inl.h"
 #include "src/roots/roots.h"
 
-/* JARA: For Dom-V */
-//#define LOG_E printf("[d8-factory-bace.cc] Enter: %s\n", __PRETTY_FUNCTION__);
-#define LOG_E
-/* End of JARA */
-
 namespace v8 {
 namespace internal {
 
@@ -82,8 +77,6 @@ Handle<AccessorPair> FactoryBase<Impl>::NewAccessorPair() {
 
 template <typename Impl>
 Handle<Code> FactoryBase<Impl>::NewCode(const NewCodeOptions& options) {
-  LOG_E
-  
   Handle<CodeWrapper> wrapper = NewCodeWrapper();
   Tagged<Map> map = read_only_roots().code_map();
   int size = map->instance_size();
@@ -1301,9 +1294,6 @@ Tagged<HeapObject> FactoryBase<Impl>::AllocateRawWithImmortalMap(
   // TODO(delphick): Potentially you could also pass a immortal immovable Map
   // from OLD_SPACE here, like external_map or message_object_map, but currently
   // no one does so this check is sufficient.
-
-  LOG_E
-    
   DCHECK(ReadOnlyHeap::Contains(map));
   Tagged<HeapObject> result = AllocateRaw(size, allocation, alignment);
   DisallowGarbageCollection no_gc;
@@ -1314,7 +1304,6 @@ Tagged<HeapObject> FactoryBase<Impl>::AllocateRawWithImmortalMap(
 template <typename Impl>
 Tagged<HeapObject> FactoryBase<Impl>::AllocateRaw(
     int size, AllocationType allocation, AllocationAlignment alignment) {
-  LOG_E
   return impl()->AllocateRaw(size, allocation, alignment);
 }
 
