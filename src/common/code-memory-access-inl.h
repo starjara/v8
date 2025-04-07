@@ -222,7 +222,10 @@ void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
     /* JARA Dom-v write code */
     //printf("\taddress_: 0x%lx\ttarget: 0x%lx\tsrc: %p size: %ld\n", address_, address_ + dst_offset, src, num_bytes);
 
-   domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 0);
+    if(num_bytes >= 292)
+      domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 1);
+    else
+      domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 0);
   /* End of JARA */
 
   //CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
@@ -236,8 +239,10 @@ void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
       return ;
     }
   //printf("\taddress_: 0x%lx\ttarget: 0x%lx\tsrc: %p size: %ld\n", address_, address_ + dst_offset, src, num_bytes);
-  
-  domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 0);
+    if(num_bytes >= 292)
+      domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 1);
+    else
+      domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 0);
   /* End of JARA */
 
   //CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
