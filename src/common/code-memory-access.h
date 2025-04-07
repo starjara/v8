@@ -7,6 +7,16 @@
 
 #include <map>
 
+
+/* JARA: For mprtocet */
+extern "C" {
+  #include <sys/mman.h>
+}
+#ifdef MAP_TYPE
+#undef MAP_TYPE
+#endif
+/* End of JARA */
+
 #include "include/v8-internal.h"
 #include "include/v8-platform.h"
 #include "src/base/build_config.h"
@@ -56,9 +66,30 @@ class CodeSpaceWriteScope;
 
 #else  // V8_HAS_PKU_JIT_WRITE_PROTECT
 
-#define THREAD_ISOLATION_ALIGN_SZ 0
-#define THREAD_ISOLATION_ALIGN
-#define THREAD_ISOLATION_FILL_PAGE_SZ(size) 0
+// #define THREAD_ISOLATION_ALIGN_SZ 0
+// #define THREAD_ISOLATION_ALIGN
+// #define THREAD_ISOLATION_FILL_PAGE_SZ(size) 0
+
+  /* JARA: For mprotect */
+#define THREAD_ISOLATION_ALIGN_SZ 0x1000
+#define THREAD_ISOLATION_ALIGN alignas(THREAD_ISOLATION_ALIGN_SZ)
+#define THREAD_ISOLATION_ALIGN_OFFSET_MASK (THREAD_ISOLATION_ALIGN_SZ - 1)
+#define THREAD_ISOLATION_FILL_PAGE_SZ(size)                                    \
+  ((THREAD_ISOLATION_ALIGN_SZ - ((size)&THREAD_ISOLATION_ALIGN_OFFSET_MASK)) % \
+   THREAD_ISOLATION_ALIGN_SZ)
+
+ /* JARA: info struct */
+  // WriteScope info
+  struct WriteScopeInfo{
+    const char *comment;
+    Address addr;
+    size_t size;
+  };
+  /* End of JARA */
+
+
+
+  /* End of JARA */
 
 #endif  // V8_HAS_PKU_JIT_WRITE_PROTECT
 
@@ -86,9 +117,15 @@ class CodeSpaceWriteScope;
 // The scope is reentrant and thread safe.
 class V8_NODISCARD RwxMemoryWriteScope {
  public:
+ 
   // The comment argument is used only for ensuring that explanation about why
   // the scope is needed is given at particular use case.
   V8_INLINE explicit RwxMemoryWriteScope(const char* comment);
+  
+  /* JARA: For mprotect */
+  V8_INLINE explicit RwxMemoryWriteScope(WriteScopeInfo scope_info);
+  /* End of JARA */
+
   V8_INLINE ~RwxMemoryWriteScope();
 
   // Disable copy constructor and copy-assignment operator, since this manages
@@ -99,6 +136,7 @@ class V8_NODISCARD RwxMemoryWriteScope {
   // Returns true if current configuration supports fast write-protection of
   // executable pages.
   V8_INLINE static bool IsSupported();
+
 
 #if V8_HAS_PKU_JIT_WRITE_PROTECT
   static int memory_protection_key();
@@ -112,6 +150,11 @@ class V8_NODISCARD RwxMemoryWriteScope {
 #endif  // V8_HAS_PKU_JIT_WRITE_PROTECT
 
  private:
+ /* JARA: For mprotect */
+ Address addr_ = 0;
+ size_t size_ = 0;
+ /* End of JARA */
+ 
   friend class RwxMemoryWriteScopeForTesting;
   friend class wasm::CodeSpaceWriteScope;
 
@@ -120,6 +163,12 @@ class V8_NODISCARD RwxMemoryWriteScope {
   // scope classes that affect executable pages permissions.
   V8_INLINE static void SetWritable();
   V8_INLINE static void SetExecutable();
+
+ /* JARA: For mprotect */
+  V8_INLINE static void SetWritable(Address addr, size_t size);
+  V8_INLINE static void SetExecutable(Address addr, size_t size);
+ /* End of JARA */
+
 };
 
 class WritableJitPage;

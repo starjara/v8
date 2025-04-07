@@ -429,7 +429,12 @@ PageMetadata* MemoryAllocator::AllocatePage(
   MemoryChunk* chunk;
   MemoryChunk::MainThreadFlags flags = metadata->InitialFlags(executable);
   if (executable) {
-    RwxMemoryWriteScope scope("Initialize a new MemoryChunk.");
+    //RwxMemoryWriteScope scope("Initialize a new MemoryChunk.");
+    
+    /* JARA: For mprotect */
+    RwxMemoryWriteScope scope(WriteScopeInfo{"Initialize a new MemoryChunk.", (Address) chunk_info->chunk, chunk_info->size});
+    /* End of JARA */
+    
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);
   } else {
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);
@@ -491,7 +496,12 @@ LargePageMetadata* MemoryAllocator::AllocateLargePage(
   MemoryChunk* chunk;
   MemoryChunk::MainThreadFlags flags = metadata->InitialFlags(executable);
   if (executable) {
-    RwxMemoryWriteScope scope("Initialize a new MemoryChunk.");
+    // RwxMemoryWriteScope scope("Initialize a new MemoryChunk.");
+
+    /* JARA: For mprotect */
+    RwxMemoryWriteScope scope(WriteScopeInfo{"Initialize a new MemoryChunk.", (Address) chunk_info->chunk, chunk_info->size});
+    /* End of JARA */
+    
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);
   } else {
     chunk = new (chunk_info->chunk) MemoryChunk(flags, metadata);

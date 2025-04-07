@@ -221,7 +221,9 @@ MaybeHandle<Code> Factory::CodeBuilder::BuildInternal(
       // directly to the actual heap objects. These pointers can include
       // references to the code object itself, through the self_reference
       // parameter.
+      printf("before finalize\n");
       istream->Finalize(*code, *reloc_info, code_desc_, isolate_->heap());
+      printf("after finalize\n");
 
 #ifdef VERIFY_HEAP
       if (v8_flags.verify_heap) {

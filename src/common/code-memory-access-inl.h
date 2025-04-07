@@ -21,20 +21,44 @@
 #include <BrowserEngineCore/BEMemory.h>
 #endif
 
+
 namespace v8 {
 namespace internal {
 
 RwxMemoryWriteScope::RwxMemoryWriteScope(const char* comment) {
+  printf("\t%s\n", comment);
   if (!v8_flags.jitless) {
     SetWritable();
   }
 }
 
-RwxMemoryWriteScope::~RwxMemoryWriteScope() {
+// RwxMemoryWriteScope::~RwxMemoryWriteScope() {
+//   if (!v8_flags.jitless) {
+//     SetExecutable();
+//   }
+// }
+  
+/* JARA: For mprotect */
+RwxMemoryWriteScope::RwxMemoryWriteScope(WriteScopeInfo scope_info)
+  : addr_(RoundDown(scope_info.addr, THREAD_ISOLATION_ALIGN_SZ)),
+    size_(scope_info.size > 0x40000 ? RoundUp(scope_info.size, THREAD_ISOLATION_ALIGN_SZ) : 0x40000)
+{
+  printf("\t%s\t0x%lx\t0x%lx\n", scope_info.comment, addr_, size_);
   if (!v8_flags.jitless) {
-    SetExecutable();
+    SetWritable(addr_, size_);
   }
 }
+	  
+RwxMemoryWriteScope::~RwxMemoryWriteScope() {
+  if (!v8_flags.jitless) {
+    if((addr_ == 0) || (size_ == 0))
+      SetExecutable();
+    else 
+      SetExecutable(addr_, size_);
+  }
+}
+
+/* End of JARA */
 
 WritableJitAllocation::~WritableJitAllocation() = default;
 
@@ -45,7 +69,8 @@ WritableJitAllocation::WritableJitAllocation(
       // The order of these is important. We need to create the write scope
       // before we lookup the Jit page, since the latter will take a mutex in
       // protected memory.
-      write_scope_("WritableJitAllocation"),
+      //write_scope_("WritableJitAllocation"),
+      write_scope_(WriteScopeInfo{"WritableJitAllocation", addr, size}),
       page_ref_(ThreadIsolation::LookupJitPage(addr, size)),
       allocation_(source == JitAllocationSource::kRegister
                       ? page_ref_->RegisterAllocation(addr, size, type)
@@ -74,7 +99,8 @@ WritableJumpTablePair::WritableJumpTablePair(Address jump_table_address,
                                              size_t jump_table_size,
                                              Address far_jump_table_address,
                                              size_t far_jump_table_size)
-    : write_scope_("WritableJumpTablePair"),
+//: write_scope_("WritableJumpTablePair"),
+  : write_scope_(WriteScopeInfo{"WritableJumpTablePair", jump_table_address, jump_table_size}),
       // Always split the pages since we are not guaranteed that the jump table
       // and far jump table are on the same JitPage.
       jump_table_pages_(ThreadIsolation::SplitJitPages(
@@ -169,8 +195,9 @@ void WritableJitAllocation::ClearBytes(size_t offset, size_t len) {
 WritableJitPage::~WritableJitPage() = default;
 
 WritableJitPage::WritableJitPage(Address addr, size_t size)
-    : write_scope_("WritableJitPage"),
-      page_ref_(ThreadIsolation::LookupJitPage(addr, size)) {}
+//: write_scope_("WritableJitPage"),
+  : write_scope_(WriteScopeInfo{"WritableJitPage", addr, size}),
+    page_ref_(ThreadIsolation::LookupJitPage(addr, size)) {}
 
 WritableJitAllocation WritableJitPage::LookupAllocationContaining(
     Address addr) {
@@ -285,13 +312,25 @@ void RwxMemoryWriteScope::SetExecutable() {
 #else  // !V8_HAS_PTHREAD_JIT_WRITE_PROTECT && !V8_TRY_USE_PKU_JIT_WRITE_PROTECT
 
 // static
-bool RwxMemoryWriteScope::IsSupported() { return false; }
+bool RwxMemoryWriteScope::IsSupported() { return true; }
 
 // static
 void RwxMemoryWriteScope::SetWritable() {}
 
 // static
 void RwxMemoryWriteScope::SetExecutable() {}
+
+// static
+void RwxMemoryWriteScope::SetWritable(Address addr, size_t size) {
+  printf("Writable 0x%lx, 0x%lx\n", addr, size);
+  mprotect((void *)addr, size, PROT_READ | PROT_WRITE);
+}
+
+// static
+void RwxMemoryWriteScope::SetExecutable(Address addr, size_t size) {
+  printf("Executable 0x%lx, 0x%lx\n", addr, size);
+  mprotect((void *)addr, size, PROT_READ | PROT_EXEC);
+}
 
 #endif  // V8_HAS_PTHREAD_JIT_WRITE_PROTECT
 

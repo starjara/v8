@@ -398,11 +398,22 @@ void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
   JitPage* jit_page;
   ConstructNew(&jit_page, size);
   trusted_data_.jit_pages_->emplace(address, jit_page);
+
+
+  /* JARA: For mprotect */
+  mprotect((void *)address, size, PROT_READ | PROT_EXEC);  
+  /* End of JARA */
+  
 }
 
 void ThreadIsolation::UnregisterJitPage(Address address, size_t size) {
   // TODO(sroettger): merge the write scopes higher up.
   CFIMetadataWriteScope write_scope("Removing executable memory.");
+
+
+  /* JARA: For mprotect */
+  mprotect((void *)address, size, PROT_READ | PROT_WRITE | PROT_EXEC);  
+  /* End of JARA */
 
   JitPage* to_delete;
   {

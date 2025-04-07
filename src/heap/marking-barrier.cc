@@ -226,7 +226,22 @@ void ActivateSpaces(Heap* heap, MarkingMode marking_mode) {
   }
   ActivateSpace(heap->new_lo_space(), marking_mode);
   {
-    RwxMemoryWriteScope scope("For writing flags.");
+    // RwxMemoryWriteScope scope("For writing flags.");
+    /* JARA: For mprotect */
+    printf("M1 code_space: 0x%lx\tsize: 0x%lx\n",
+	   heap->code_space()->first_page()->Chunk()->address(), heap->code_space()->Size());
+    printf("M1 code_space_last: 0x%lx\tsize: 0x%lx\n",
+	   heap->code_space()->last_page()->Chunk()->address(), heap->code_space()->Size());
+    if(heap->code_lo_space() != NULL) {
+      printf("M1 code_lo_space: 0x%lx\tsize: 0x%lx\n",
+	     heap->code_lo_space()->first_page()->Chunk()->address(), heap->code_lo_space()->Size());
+    }
+    
+    Address addr = heap->code_space()->first_page()->Chunk()->address();
+    size_t size =  heap->code_space()->last_page()->Chunk()->address() - addr;
+    size += 0x41000;
+    RwxMemoryWriteScope scope(WriteScopeInfo{"For writing flags.", addr, size});
+    /* End of JARA */
     ActivateSpace(heap->code_space(), marking_mode);
     ActivateSpace(heap->code_lo_space(), marking_mode);
   }
@@ -253,9 +268,22 @@ void DeactivateSpaces(Heap* heap, MarkingMode marking_mode) {
   }
   DeactivateSpace(heap->new_lo_space());
   {
-    RwxMemoryWriteScope scope("For writing flags.");
+    //RwxMemoryWriteScope scope("For writing flags.");
+    /* JARA: For mprotect */
+    printf("M2 code_space: 0x%lx\tsize: 0x%lx\n",
+	   heap->code_space()->first_page()->Chunk()->address(), heap->code_space()->Size());
+    printf("M2 code_space_last: 0x%lx\tsize: 0x%lx\n",
+	   heap->code_space()->last_page()->Chunk()->address(), heap->code_space()->Size());
+    
+    Address addr = heap->code_space()->first_page()->Chunk()->address();
+    size_t size =  heap->code_space()->last_page()->Chunk()->address() - addr;
+    size += 0x41000;
+    RwxMemoryWriteScope scope(WriteScopeInfo{"For writing flags.", addr, size});
+    /* End of JARA */
     DeactivateSpace(heap->code_space());
+    printf("heap->code_space()\n");
     DeactivateSpace(heap->code_lo_space());
+    printf("heap->code_lo_space\n");
   }
 
   if (marking_mode == MarkingMode::kMajorMarking) {

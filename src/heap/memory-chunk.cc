@@ -167,7 +167,7 @@ size_t MemoryChunk::OffsetMaybeOutOfRange(Address addr) const {
 
 void MemoryChunk::SetFlagSlow(Flag flag) {
   if (executable()) {
-    RwxMemoryWriteScope scope("Set a MemoryChunk flag in executable memory.");
+    RwxMemoryWriteScope scope(WriteScopeInfo{"Set a MemoryChunk flag in executable memory.", this->address(), sizeof(Flag)});
     SetFlagUnlocked(flag);
   } else {
     SetFlagNonExecutable(flag);
@@ -176,7 +176,7 @@ void MemoryChunk::SetFlagSlow(Flag flag) {
 
 void MemoryChunk::ClearFlagSlow(Flag flag) {
   if (executable()) {
-    RwxMemoryWriteScope scope("Clear a MemoryChunk flag in executable memory.");
+    RwxMemoryWriteScope scope(WriteScopeInfo{"Clear a MemoryChunk flag in executable memory.", this->address(), sizeof(Flag)});
     ClearFlagUnlocked(flag);
   } else {
     ClearFlagNonExecutable(flag);

@@ -3829,7 +3829,16 @@ void Heap::Unmark() {
   }
 
   {
-    RwxMemoryWriteScope scope("For writing flags.");
+    //RwxMemoryWriteScope scope("For writing flags.");
+    /* JARA: For mprotect */
+    printf("H1 code_space: 0x%lx\tsize: 0x%lx\n",
+	   code_space()->first_page()->Chunk()->address(), code_space()->Size());
+    
+    Address addr = code_space()->first_page()->Chunk()->address();
+    size_t size =  code_space()->last_page()->Chunk()->address() - addr;
+    size += 0x41000;
+    RwxMemoryWriteScope scope(WriteScopeInfo{"For writing flags.", addr, size});
+    /* End of JARA */
     unmark_space(*code_space());
     unmark_space(*code_lo_space());
   }
@@ -3852,7 +3861,16 @@ void Heap::DeactivateMajorGCInProgressFlag() {
   deactivate_space(*lo_space());
 
   {
-    RwxMemoryWriteScope scope("For writing flags.");
+    //RwxMemoryWriteScope scope("For writing flags.");
+    /* JARA: For mprotect */
+    printf("H2 code_space: 0x%lx\tsize: 0x%lx\n",
+	   code_space()->first_page()->Chunk()->address(), code_space()->Size());
+    
+    Address addr = code_space()->first_page()->Chunk()->address();
+    size_t size =  code_space()->last_page()->Chunk()->address() - addr;
+    size += 0x41000;
+    RwxMemoryWriteScope scope(WriteScopeInfo{"For writing flags.", addr, size});
+    /* End of JARA */
     deactivate_space(*code_space());
     deactivate_space(*code_lo_space());
   }
