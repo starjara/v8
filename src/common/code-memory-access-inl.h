@@ -285,13 +285,31 @@ void RwxMemoryWriteScope::SetExecutable() {
 #else  // !V8_HAS_PTHREAD_JIT_WRITE_PROTECT && !V8_TRY_USE_PKU_JIT_WRITE_PROTECT
 
 // static
-bool RwxMemoryWriteScope::IsSupported() { return false; }
+bool RwxMemoryWriteScope::IsSupported() { return true; }
 
 // static
-void RwxMemoryWriteScope::SetWritable() {}
+void RwxMemoryWriteScope::SetWritable() {
+  uint64_t start, current;
+  volatile uint64_t dummy;
+
+  asm volatile ("rdcycle %0" : "=r"(start));
+  do {
+    asm volatile ("rdcycle %0" : "=r"(current));
+    dummy = current;  // prevent optimization
+  } while (current - start < 6000);
+}
 
 // static
-void RwxMemoryWriteScope::SetExecutable() {}
+void RwxMemoryWriteScope::SetExecutable() {
+  uint64_t start, current;
+  volatile uint64_t dummy;
+
+  asm volatile ("rdcycle %0" : "=r"(start));
+  do {
+    asm volatile ("rdcycle %0" : "=r"(current));
+    dummy = current;  // prevent optimization
+  } while (current - start < 6000);
+}
 
 #endif  // V8_HAS_PTHREAD_JIT_WRITE_PROTECT
 
