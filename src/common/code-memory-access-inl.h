@@ -34,7 +34,7 @@ extern "C" {
 
 /* JARA: For Dom-V */
 
-// #define LOG_E_H printf("[d8-code-memory-access-inl.h] Enter: %s\n", __PRETTY_FUNCTION__);
+//#define LOG_E_H printf("[d8-code-memory-access-inl.h] Enter: %s\n", __PRETTY_FUNCTION__);
 #define LOG_E_H
 /* End of JARA */
 
@@ -220,9 +220,9 @@ void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
                                      size_t num_bytes) {
   LOG_E_H
     /* JARA Dom-v write code */
-    //printf("\taddress_: 0x%lx\ttarget: 0x%lx\tsrc: %p size: %ld\n", address_, address_ + dst_offset, src, num_bytes);
+    //printf("\tCopyCode address_: 0x%lx\ttarget: 0x%lx\tsrc: %p size: %ld\n", address_, address_ + dst_offset, src, num_bytes);
 
-    if(num_bytes >= 292)
+    if(num_bytes >= 384)
       domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 1);
     else
       domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 0);
@@ -238,8 +238,8 @@ void WritableJitAllocation::CopyData(size_t dst_offset, const uint8_t* src,
     if(src == NULL) {
       return ;
     }
-  //printf("\taddress_: 0x%lx\ttarget: 0x%lx\tsrc: %p size: %ld\n", address_, address_ + dst_offset, src, num_bytes);
-    if(num_bytes >= 292)
+  //printf("\tCopyData address_: 0x%lx\ttarget: 0x%lx\tsrc: %p size: %ld\n", address_, address_ + dst_offset, src, num_bytes);
+    if(num_bytes >= 384)
       domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 1);
     else
       domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 0);
@@ -252,6 +252,10 @@ void WritableJitAllocation::ClearBytes(size_t offset, size_t len) {
   LOG_E_H
     /* JARA: Clear jitpage */
     char temp[len] = {0, };
+  //printf("\tClearBytes address_: 0x%lx\ttarget: 0x%lx\tsize: %ld\n", address_, address_ + offset, len);
+  if(len >= 384)
+    domv_write((void *)(address_ + offset), temp, len, 1);
+  else 
     domv_write((void *)(address_ + offset), temp, len, 0);
   /* End of JARA */
   

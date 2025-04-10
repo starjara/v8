@@ -44,7 +44,7 @@
 #include "src/objects/heap-number-inl.h"
 
 /* JARA: For Dom-V */
-// #define LOG_E printf("[d8-assembler-riscv.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+//#define LOG_E printf("[d8-assembler-riscv.cc] Enter: %s\n", __PRETTY_FUNCTION__);
 #define LOG_E
 /* End of JARA */
 
@@ -221,6 +221,7 @@ MemOperand::MemOperand(Register rm, int32_t unit, int32_t multiplier,
 }
 
 void Assembler::AllocateAndInstallRequestedHeapNumbers(LocalIsolate* isolate) {
+  LOG_E
   DCHECK_IMPLIES(isolate == nullptr, heap_number_requests_.empty());
   for (auto& request : heap_number_requests_) {
     Handle<HeapObject> object =
@@ -539,6 +540,7 @@ void Assembler::disassembleInstr(uint8_t* pc) {
 
 void Assembler::target_at_put(int pos, int target_pos, bool is_internal,
                               bool trampoline) {
+  LOG_E
   if (is_internal) {
     uintptr_t imm = reinterpret_cast<uintptr_t>(buffer_start_) + target_pos;
     *reinterpret_cast<uintptr_t*>(buffer_start_ + pos) = imm;
@@ -1273,12 +1275,24 @@ void Assembler::AdjustBaseAndOffset(MemOperand* src, Register scratch,
 
 int Assembler::RelocateInternalReference(RelocInfo::Mode rmode, Address pc,
                                          intptr_t pc_delta) {
+  LOG_E
   if (RelocInfo::IsInternalReference(rmode)) {
     intptr_t* p = reinterpret_cast<intptr_t*>(pc);
     if (*p == kEndOfJumpChain) {
       return 0;  // Number of instructions patched.
     }
-    *p += pc_delta;
+
+    //*p += pc_delta;
+    /* JARA: Write through domv_write */
+
+    if(((unsigned long long)p >> 36) != 0x03) {
+      *p += pc_delta;
+    }
+    else {
+      intptr_t temp = *p + pc_delta;
+      domv_write((void *)p, &temp, sizeof(temp), 0);
+    }
+    /* End of JARA */
     return 2;  // Number of instructions patched.
   }
   Instr instr = instr_at(pc);
@@ -1595,31 +1609,74 @@ void Assembler::set_target_value_at(Address pc, uint64_t target,
   int64_t low_12 = high_31 & 0xfff;               // 12 bits
   /* JARA: Write through domv_write */
 
-  /* End of JARA */
-  uint32_t val = *p & 0xfff;
-  val = val | ((int32_t)high_20 << 12);
-  domv_write(p, &val, sizeof(val), 0);
-
-  val = *(p + 1) & 0xfffff;
-  val = val | ((int32_t)low_12 << 20);
-  domv_write((p + 1), &val, sizeof(val), 0);
-
-  val = *(p + 2) & 0xfffff;
-  val = val | (11 << 20);
-  domv_write((p + 2), &val, sizeof(val), 0);
+  // if(((unsigned long long)p >> 36) == 0x3) {
+  //   uint32_t val = *p & 0xfff;
+  //   val = val | ((int32_t)high_20 << 12);
+  //   domv_write(p, &val, sizeof(val), 0);
     
-  val = *(p + 3) & 0xfffff;
-  val = val | ((int32_t)b11 << 20);
-  domv_write((p + 3), &val, sizeof(val), 0);
+  //   val = *(p + 1) & 0xfffff;
+  //   val = val | ((int32_t)low_12 << 20);
+  //   domv_write((p + 1), &val, sizeof(val), 0);
+    
+  //   val = *(p + 2) & 0xfffff;
+  //   val = val | (11 << 20);
+  //   domv_write((p + 2), &val, sizeof(val), 0);
+    
+  //   val = *(p + 3) & 0xfffff;
+  //   val = val | ((int32_t)b11 << 20);
+  //   domv_write((p + 3), &val, sizeof(val), 0);
 
-  val = *(p + 4) & 0xfffff;
-  val = val | (6 << 20);
-  domv_write((p + 4), &val, sizeof(val), 0);
+  //   val = *(p + 4) & 0xfffff;
+  //   val = val | (6 << 20);
+  //   domv_write((p + 4), &val, sizeof(val), 0);
+    
+  //   val = *(p + 5) & 0xfffff;
+  //   val = val | ((int32_t)a6 << 20);
+  //   domv_write((p + 5), &val, sizeof(val), 0);
+  // }
+  
+  if(((unsigned long long)p >> 36) != 0x03) {
+    *p = *p & 0xfff;
+    *p = *p | ((int32_t)high_20 << 12);
+    *(p + 1) = *(p + 1) & 0xfffff;
+    *(p + 1) = *(p + 1) | ((int32_t)low_12 << 20);
+    *(p + 2) = *(p + 2) & 0xfffff;
+    *(p + 2) = *(p + 2) | (11 << 20);
+    *(p + 3) = *(p + 3) & 0xfffff;
+    *(p + 3) = *(p + 3) | ((int32_t)b11 << 20);
+    *(p + 4) = *(p + 4) & 0xfffff;
+    *(p + 4) = *(p + 4) | (6 << 20);
+    *(p + 5) = *(p + 5) & 0xfffff;
+    *(p + 5) = *(p + 5) | ((int32_t)a6 << 20);
+  }
+  else {
+    uint32_t val = *p & 0xfff;
+    val = val | ((int32_t)high_20 << 12);
+    domv_write(p, &val, sizeof(val), 0);
+    
+    val = *(p + 1) & 0xfffff;
+    val = val | ((int32_t)low_12 << 20);
+    domv_write((p + 1), &val, sizeof(val), 0);
+    
+    val = *(p + 2) & 0xfffff;
+    val = val | (11 << 20);
+    domv_write((p + 2), &val, sizeof(val), 0);
+    
+    val = *(p + 3) & 0xfffff;
+    val = val | ((int32_t)b11 << 20);
+    domv_write((p + 3), &val, sizeof(val), 0);
 
-  val = *(p + 5) & 0xfffff;
-  val = val | ((int32_t)a6 << 20);
-  domv_write((p + 5), &val, sizeof(val), 0);
+    val = *(p + 4) & 0xfffff;
+    val = val | (6 << 20);
+    domv_write((p + 4), &val, sizeof(val), 0);
+    
+    val = *(p + 5) & 0xfffff;
+    val = val | ((int32_t)a6 << 20);
+    domv_write((p + 5), &val, sizeof(val), 0);
+  }
 
+  /* End of JARA */
+  
   // *p = *p & 0xfff;
   // *p = *p | ((int32_t)high_20 << 12);
   // *(p + 1) = *(p + 1) & 0xfffff;

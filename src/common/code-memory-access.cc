@@ -9,7 +9,7 @@
 
 /* JARA: For Dom-V */
 
-// #define LOG_E printf("[d8-code-memory-access.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+//#define LOG_E printf("[d8-code-memory-access.cc] Enter: %s\n", __PRETTY_FUNCTION__);
 #define LOG_E
 /* End of JARA */
 

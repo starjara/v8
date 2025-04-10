@@ -26,7 +26,7 @@ extern "C" {
   #include <sys/mman.h>
 }
 
-// #define LOG_E printf("[d8-memory-allocator.cc] Enter: %s\n", __PRETTY_FUNCTION__);
+//#define LOG_E printf("[d8-memory-allocator.cc] Enter: %s\n", __PRETTY_FUNCTION__);
 #define LOG_E
 /* End of JARA */
 
