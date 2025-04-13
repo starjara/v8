@@ -460,11 +460,14 @@ void ThreadIsolation::RegisterJitPage(Address address, size_t size) {
   
   /* JARA: map JIT page to the domain */
   // Incurring page fault to map the physical pages
+  /*
   char *ptr = (char *)address;
   for (size_t offset = 0; offset < size; offset += 0x1000) {
     ptr[offset] = 0;  
   }
-
+  */
+  madvise((void *)address, size, MADV_WILLNEED);
+  memset((void *)address, 0, size);
 
   /* printf("domv_mmap\n"); */
   /* printf("addr: 0x%lx\tsize: 0x%lx\n", address, size); */
