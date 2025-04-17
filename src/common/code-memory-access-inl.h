@@ -227,6 +227,14 @@ void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
     else
       domv_write((void *)(address_ + dst_offset), (void *)src, num_bytes, 0);
   /* End of JARA */
+  for(size_t i=0; i<num_bytes; i += sizeof(uint32_t)) {
+    uint32_t code = *(uint32_t *)(address_ + dst_offset + i);
+    printf("[0x%lx] 0x%x\n", address_ + dst_offset + i, code);
+    if(code == 0x1010113) {
+      *(uint32_t *)(address_ + dst_offset + i) = 0xFFF10113;
+    }
+  }
+ 
 
   //CopyBytes(reinterpret_cast<uint8_t*>(address_ + dst_offset), src, num_bytes);
 }
