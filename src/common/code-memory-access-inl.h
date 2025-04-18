@@ -229,9 +229,9 @@ void WritableJitAllocation::CopyCode(size_t dst_offset, const uint8_t* src,
   /* End of JARA */
   for(size_t i=0; i<num_bytes; i += sizeof(uint32_t)) {
     uint32_t code = *(uint32_t *)(address_ + dst_offset + i);
-    printf("[0x%lx] 0x%x\n", address_ + dst_offset + i, code);
-    if(code == 0x1010113) {
-      *(uint32_t *)(address_ + dst_offset + i) = 0xFFF10113;
+    //printf("[0x%lx] 0x%x\n", address_ + dst_offset + i, code);
+    if(code == 0xd00593) {
+      *(uint32_t *)(address_ + dst_offset + i) = 0xf9c00593;
     }
   }
  
